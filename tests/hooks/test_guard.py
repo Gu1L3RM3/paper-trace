@@ -72,3 +72,20 @@ def test_blocks_grep_on_env_path(repo: Path) -> None:
 
 def test_allows_env_example_read(repo: Path) -> None:
     assert run_guard("Read", {"file_path": str(repo / ".env.example")}, repo) == 0
+
+
+def codex_patch(header: str) -> dict[str, str]:
+    return {"command": f"*** Begin Patch\n{header}\n+X=1\n*** End Patch\n"}
+
+
+@pytest.mark.parametrize(
+    "header",
+    ["*** Update File: .env", "*** Add File: config/.env.local", "*** Delete File: .env"],
+)
+def test_blocks_codex_patch_on_env(header: str, repo: Path) -> None:
+    assert run_guard("apply_patch", codex_patch(header), repo) == 2
+
+
+@pytest.mark.parametrize("header", ["*** Update File: .env.example", "*** Add File: src/app.py"])
+def test_allows_codex_patch_elsewhere(header: str, repo: Path) -> None:
+    assert run_guard("apply_patch", codex_patch(header), repo) == 0

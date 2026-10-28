@@ -13,6 +13,7 @@ import sys
 
 # .env and .env.<anything> except .env.example; not .envrc or foo.env.
 ENV_FILE = re.compile(r"(?<![\w.-])\.env(?:\.(?!example\b)[\w-]+)?(?![\w.-])")
+PATCH_FILE = re.compile(r"^\*\*\* (?:(?:Add|Update|Delete) File|Move to): (.+)$", re.M)
 GIT_PUSH = re.compile(r"\bgit\b[^;&|]*\bpush\b([^;&|]*)")
 BLOCKED_BASH = [
     (re.compile(r"--no-verify\b"), "Do not bypass git hooks (--no-verify)."),
@@ -42,9 +43,14 @@ def check_bash(command: str, cwd: str) -> str | None:
     return None
 
 
-def check_path(tool_input: dict[str, str]) -> str | None:
-    path = tool_input.get("file_path") or tool_input.get("path") or ""
-    if ENV_FILE.search(path):
+def edited_paths(tool_name: str, tool_input: dict[str, str]) -> list[str]:
+    if tool_name == "apply_patch":  # Codex: paths only exist inside the patch headers
+        return PATCH_FILE.findall(tool_input.get("command", ""))
+    return [tool_input.get("file_path") or tool_input.get("path") or ""]
+
+
+def check_paths(paths: list[str]) -> str | None:
+    if any(ENV_FILE.search(path) for path in paths):
         return "Secret .env files are off-limits to agents; ask the user."
     return None
 
@@ -55,9 +61,9 @@ def main() -> int:
     if payload.get("tool_name") == "Bash":
         reason = check_bash(tool_input.get("command", ""), payload.get("cwd", "."))
     else:
-        reason = check_path(tool_input)
+        reason = check_paths(edited_paths(payload.get("tool_name", ""), tool_input))
     if reason:
-        print(f"Blocked by .claude/hooks/guard.py: {reason}", file=sys.stderr)
+        print(f"Blocked by agent guard (.claude/hooks/guard.py): {reason}", file=sys.stderr)
         return 2
     return 0
 
