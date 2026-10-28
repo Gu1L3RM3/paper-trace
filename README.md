@@ -28,6 +28,18 @@ and `LLM_MODEL` in the env file. `LLM_API_KEY` is optional; no code changes, no 
 
 Real-API tests are opt-in: `uv run pytest -m live`.
 
+## API
+
+```bash
+uv run uvicorn papertrace.api.app:app --reload
+curl -N -X POST localhost:8000/api/research -H 'content-type: application/json' \
+  -d '{"text":"Does sleep improve memory?"}'
+```
+
+Streams SSE events in order: `plan`, `papers`, `synthesis`, `done`. Failures arrive as one
+`error` event (`{"message": ...}`) instead of an HTTP 500. `synthesis.unmatched_citations` lists
+any `(Author, Year)` the answer cites that no retrieved paper backs.
+
 ## Bring your own LLM
 
 Any model API works as long as an adapter implements the two-method `LLMClient` port
