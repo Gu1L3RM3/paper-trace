@@ -22,6 +22,7 @@ from papertrace.llm.base import Message, ToolSpec
 from papertrace.settings import Settings
 
 _TIMEOUT = 120.0
+_CORRECTIONS = 1  # times a bad tool call goes back to the model
 _MAX_RETRIES = 2  # SDK retries 408/409/429/5xx and network errors with backoff
 # Keywords that strict decoders reject; ToolSpec.output still enforces them locally.
 _UNSUPPORTED = {"minLength", "maxLength", "minimum", "maximum", "exclusiveMinimum", "maxItems"}
@@ -90,37 +91,81 @@ class OpenAIClient:
     async def call_tool[T: BaseModel](
         self, *, system: str, messages: list[Message], tool: ToolSpec[T]
     ) -> T:
-        message = await self._chat(
-            system,
-            messages,
-            tools=[
-                {
-                    "type": "function",
-                    "function": {
-                        "name": tool.name,
-                        "description": tool.description,
-                        "parameters": tool_parameters(tool.output),
-                    },
-                }
-            ],
-            tool_choice={"type": "function", "function": {"name": tool.name}},
-        )
-        for call in message.tool_calls or []:
-            if call.type == "function" and call.function.name == tool.name:
+        """Forced tool call; a bad call goes back to the model, which gets one chance to fix it."""
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "parameters": tool_parameters(tool.output),
+                },
+            }
+        ]
+        choice = {"type": "function", "function": {"name": tool.name}}
+        feedback: list[dict[str, Any]] = []
+        for attempt in range(_CORRECTIONS + 1):
+            message = await self._chat(system, messages, feedback, tools=tools, tool_choice=choice)
+            call = next(
+                (
+                    c
+                    for c in message.tool_calls or []
+                    if c.type == "function" and c.function.name == tool.name
+                ),
+                None,
+            )
+            cause: Exception | None = None
+            turn: list[dict[str, Any]]
+            if call is None:
+                problem = (
+                    f"Model {self._model!r} did not call {tool.name}. Try again; if it keeps "
+                    "happening, set LLM_MODEL to a model that supports function calling."
+                )
+                turn = [
+                    {"role": "assistant", "content": message.content or ""},
+                    {"role": "user", "content": f"Call the tool {tool.name} to answer."},
+                ]
+            else:
                 try:
                     return tool.output.model_validate_json(call.function.arguments)
                 except ValidationError as exc:
+                    cause = exc
                     fields = "; ".join(
                         f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()
                     )
-                    raise LLMError(
+                    problem = (
                         f"The model's arguments for {tool.name} do not match its schema "
                         f"({fields}). Try again; if it keeps happening, use a stronger model."
-                    ) from exc
-        raise LLMError(
-            f"Model {self._model!r} did not call {tool.name}. Try again; if it keeps happening, "
-            "set LLM_MODEL to a model that supports function calling."
-        )
+                    )
+                    turn = [
+                        {
+                            "role": "assistant",
+                            "content": None,
+                            "tool_calls": [
+                                {
+                                    "id": call.id,
+                                    "type": "function",
+                                    "function": {
+                                        "name": tool.name,
+                                        "arguments": call.function.arguments,
+                                    },
+                                }
+                            ],
+                        },
+                        {
+                            "role": "tool",
+                            "tool_call_id": call.id,
+                            "content": (
+                                f"Your arguments do not match the schema of {tool.name}: "
+                                f"{fields}. Call {tool.name} again with arguments that satisfy "
+                                "the schema."
+                            ),
+                        },
+                    ]
+            if attempt == _CORRECTIONS:
+                raise LLMError(problem) from cause
+            feedback += turn
+        raise AssertionError("unreachable")  # pragma: no cover
 
     async def complete(self, *, system: str, messages: list[Message]) -> str:
         text = (await self._chat(system, messages)).content
@@ -131,12 +176,17 @@ class OpenAIClient:
         return text
 
     async def _chat(
-        self, system: str, messages: list[Message], **extra: Any
+        self,
+        system: str,
+        messages: list[Message],
+        feedback: list[dict[str, Any]] | None = None,
+        **extra: Any,
     ) -> ChatCompletionMessage:
         payload = cast(
             list[ChatCompletionMessageParam],
             [{"role": "system", "content": system}]
-            + [{"role": m.role, "content": m.content} for m in messages],
+            + [{"role": m.role, "content": m.content} for m in messages]
+            + (feedback or []),
         )
         try:
             async with self._semaphore or nullcontext():
