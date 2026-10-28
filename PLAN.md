@@ -12,6 +12,10 @@ Every stage follows the same rules:
 
 ---
 
+Current state: retrieval CLI, streaming backend and abstract verification are implemented.
+Live API/manual criteria remain unconfirmed until exercised; the frontend is not implemented.
+See `CONTEXT.md` §4 for actual control flow, retries and failure behavior.
+
 ## Stage 0 — Foundation
 
 **Outcome:** an empty but runnable app whose quality gates run locally and in CI, and `main` cannot
@@ -65,7 +69,7 @@ SOLID focus: **D** (agents get ports by constructor), **L** (contract tests per 
 
 ## Stage 2 — Grounded synthesis over a streaming API
 
-**Outcome:** the full 3-agent pipeline streams its stages over SSE, and any citation not backed by a
+**Outcome:** the full pipeline, now four agents, streams its stages over SSE, and any citation not backed by a
 retrieved paper is detected and reported.
 
 TDD order:
@@ -73,7 +77,8 @@ TDD order:
 2. `SynthesisAgent` with fake `LLMClient`: receives only `list[Paper]`; empty list →
    `insufficient_evidence=True` without calling the LLM.
 3. Prompt rules: cite only listed papers, admit gaps — asserted in tests on the built prompt.
-4. `Pipeline`: runs the 3 agents, yields typed `StageEvent`s (`plan`, `papers`, `synthesis`, `error`, `done`).
+4. `Pipeline`: coordinates agents and emits `plan`, `papers`, final `synthesis`, `verification`,
+   `done`; failures emit terminal `error`.
 5. `POST /api/research` → SSE; integration test with fake agents checks event order and payload schema.
 6. Concurrency cap (`LLM_MAX_CONCURRENCY`) shared by all agents.
 
@@ -81,7 +86,7 @@ SOLID focus: **S** (pipeline coordinates, agents decide, check is a pure functio
 **I** (API depends on `Pipeline`, not on agents).
 
 **Done when:**
-- [ ] `curl -N -X POST localhost:8000/api/research -d '{"text":"..."}'` shows the 3 stages in order.
+- [ ] `curl -N -X POST localhost:8000/api/research -d '{"text":"..."}'` shows all four stages in order.
 - [ ] A synthesis citing an unlisted paper is flagged in tests and in the real run's payload.
 - [ ] Errors (OpenAlex down, LLM failure) arrive as an `error` event, not a 500.
 
@@ -95,7 +100,7 @@ answer build up live in a distinctive UI.
 Work:
 1. Visual direction with the `frontend-design` skill (academic/traceability identity, see `CONTEXT.md` §8).
 2. `web/static/` vanilla HTML/CSS/JS served by FastAPI; streaming via `fetch` + `ReadableStream`
-   reader; plan, papers and synthesis render as each event arrives; citations link to DOI/URL.
+   reader; plan, papers, final synthesis and verification render as events arrive; citations link to DOI/URL.
 3. Error and empty states: no results, provider error, missing API key (checked at startup).
 4. `papertrace` console script starts the server.
 5. Full README: architecture diagram, technical decisions, how to run, example run, v1 limitations,
@@ -105,7 +110,7 @@ Work:
 SOLID focus: **S** in the frontend too (render functions per event type, one stream reader).
 
 **Done when:**
-- [ ] `uv run papertrace` + browser shows the 3 stages live on a real question.
+- [ ] `uv run papertrace` + browser shows the four stages live on a real question.
 - [ ] README steps work from a fresh clone.
 - [ ] CI green, coverage ≥85%.
 - [ ] Manual check at desktop and phone width; keyboard-usable form.
