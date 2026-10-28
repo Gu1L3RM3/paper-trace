@@ -40,3 +40,20 @@ def test_prompts_have_no_shouting_or_mid_sentence_breaks(prompt: str) -> None:
 
 def test_report_schema_stays_valid_for_the_verifier_contract() -> None:
     assert VerificationReport.model_json_schema()["required"] == ["claims", "findings"]
+
+
+@pytest.mark.parametrize(
+    ("prompt", "examples"),
+    [
+        (orchestrator._SYSTEM, 3),
+        (synthesis._SYSTEM, 3),
+        (synthesis._REVISE_SYSTEM, 4),
+        (verification._SYSTEM, 4),
+    ],
+    ids=["orchestrator", "synthesis", "revise", "verification"],
+)
+def test_prompts_are_xml_sections_with_few_shot_examples(prompt: str, examples: int) -> None:
+    assert prompt.count("<example>") >= examples
+    assert "<instructions>" in prompt or "<method>" in prompt or "<rules>" in prompt
+    for tag in set(re.findall(r"<([a-z_]+)>", prompt)):
+        assert prompt.count(f"<{tag}>") == prompt.count(f"</{tag}>"), tag
