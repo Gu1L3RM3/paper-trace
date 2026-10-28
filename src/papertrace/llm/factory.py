@@ -10,25 +10,15 @@ from papertrace.settings import Settings
 LLMProviderBuilder = Callable[[Settings, str, asyncio.Semaphore | None], LLMClient]
 
 
-# Built-ins import their adapter lazily, so a vendor SDK is loaded only when selected.
-def _anthropic(settings: Settings, model: str, semaphore: asyncio.Semaphore | None) -> LLMClient:
-    from papertrace.llm.anthropic_client import build_anthropic_client
-
-    return build_anthropic_client(settings, model, semaphore)
-
-
-def _openai_compatible(
+def _chat_completions(
     settings: Settings, model: str, semaphore: asyncio.Semaphore | None
 ) -> LLMClient:
-    from papertrace.llm.openai_compatible import build_openai_compatible_client
+    from papertrace.llm.http_client import build_http_llm_client
 
-    return build_openai_compatible_client(settings, model, semaphore)
+    return build_http_llm_client(settings, model, semaphore)
 
 
-_PROVIDERS: dict[str, LLMProviderBuilder] = {
-    "anthropic": _anthropic,
-    "openai_compatible": _openai_compatible,
-}
+_PROVIDERS: dict[str, LLMProviderBuilder] = {"chat_completions": _chat_completions}
 
 
 def register_llm_provider(name: str, builder: LLMProviderBuilder) -> None:

@@ -9,10 +9,10 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_ignore_empty=True, extra="ignore")
 
     # Built-in name or "package.module:function" for a custom provider (see llm/factory.py).
-    llm_provider: str = "anthropic"
+    llm_provider: str = "chat_completions"
     llm_api_key: SecretStr | None = None
     llm_model: str
-    llm_base_url: str | None = None
+    llm_base_url: str
     orchestrator_model: str | None = None
     synthesis_model: str | None = None
     llm_max_concurrency: int = 4
