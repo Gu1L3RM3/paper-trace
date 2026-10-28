@@ -73,7 +73,7 @@ Never commit `.env`. Never print or log keys.
 1. **Red** — write one failing test describing the behavior. Run it, see it fail for the right reason.
 2. **Green** — write the minimum code that passes it.
 3. **Refactor** — clean up with tests green.
-4. Commit (test and implementation may be separate commits: `test: ...` then `feat: ...`).
+4. Commit at green: the test and the code it drives go in the same atomic commit (`feat:`/`fix:`).
 
 Testing rules:
 - Tests never hit the network by default. HTTP is mocked with `respx`; LLMs are replaced by fakes
@@ -104,7 +104,7 @@ persistence, auth, deploy configuration, frontend frameworks or build steps. Pro
 - **Atomic commits**: one logical change per commit; the tree builds and tests pass at every commit.
 - **Conventional Commits**, short subject (≤72 chars, imperative, no trailing period):
   `feat:`, `fix:`, `test:`, `refactor:`, `docs:`, `chore:`, `ci:`, `build:`, `perf:`.
-  Examples: `test: add DOI dedup cases`, `feat: dedup papers by DOI`.
+  Examples: `feat: dedup papers by DOI`, `test: cover empty abstract case`.
 - Body only when the "why" is not obvious; keep it to a few lines.
 - `main` is protected: branch `stage-N-<name>` or `feat/<topic>`, open a PR, wait for green CI,
   rebase-merge. Never force-push `main`.

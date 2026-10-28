@@ -5,7 +5,7 @@ verifiably true. Context and rationale live in `CONTEXT.md`.
 
 Every stage follows the same rules:
 
-- **TDD**: write the failing test, make it pass with the minimum code, refactor. Commit at green.
+- **TDD**: write the failing test, make it pass with the minimum code, refactor. Commit at green, test and code together.
 - **SOLID**: each stage lists which principle shapes its design (see `CONTEXT.md` §6).
 - **Atomic commits**: Conventional Commits, short subject, one logical change per commit.
 - **Flow**: branch `stage-N-<name>` → PR → green CI → rebase merge into `main` (linear history, atomic commits kept).

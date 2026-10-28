@@ -58,7 +58,7 @@ When proposing or reviewing code, name the principle a design choice serves if i
 1. Write one failing test. Run it; confirm it fails for the expected reason.
 2. Minimum code to pass.
 3. Refactor with tests green.
-4. Commit at green (`test:` and `feat:` may be separate atomic commits).
+4. Commit at green: the test and the code it drives go in one atomic commit.
 
 - No network in the default suite: `respx` for HTTP, fake `LLMClient` for models.
 - `@pytest.mark.live` for real API tests; skipped unless `-m live`.
