@@ -8,7 +8,7 @@ with outcomes and "Done when" checklists is in `PLAN.md`. Read the current stage
 Research assistant: question (PT/EN) → Orchestrator plans 2–4 English queries (forced tool call)
 → Research Agent searches OpenAlex in parallel and dedups by DOI → Synthesis Agent writes Markdown
 citing only retrieved papers as (Author, Year) → Verification Agent assesses abstract support.
-The pipeline coordinates one revision maximum, then re-verifies and streams only final text/report.
+The pipeline streams the draft, coordinates one revision maximum and re-verifies it.
 The vanilla JS UI is planned. Never invent papers, authors, DOIs or findings.
 
 ## Commands
@@ -73,7 +73,9 @@ When proposing or reviewing code, name the principle a design choice serves if i
 - Synthesis receives the question and structured papers, never raw web text. Revision also receives
   the draft and verification report; all supplied content is untrusted data.
 - Agents return to the pipeline; they never call each other.
-- Stream only final synthesis/report; technical failures emit `error` without `done`.
+- Stream the draft first; an accepted revision follows as a second `synthesis` (`revision: true`)
+  and `verification`. Synthesis or first-verification failures emit `error` without `done`; a failed
+  revision keeps the draft. Invalid verifier reports degrade to `not_verifiable`.
 - Prompt: cite only listed papers, say when evidence is insufficient.
 - Deterministic citation check runs on every synthesis; mismatches go to `unmatched_citations`.
 - Empty paper list → `insufficient_evidence=True`, no LLM call.

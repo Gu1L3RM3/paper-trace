@@ -10,9 +10,9 @@ PaperTrace AI is a scientific research assistant. A user asks a question in natu
 
 1. plans the search,
 2. queries a real academic source,
-3. writes an internal synthesis citing only retrieved papers,
+3. writes a synthesis citing only retrieved papers, streamed as a draft,
 4. checks abstract support, optionally revises once and verifies again,
-5. returns the final synthesis and its evidence-assessment report.
+5. returns the evidence-assessment report, and a revised synthesis when a revision is accepted.
 
 The system must never invent papers, authors, DOIs or findings that the retrieved sources do not support.
 When the evidence is thin, it says so instead of filling the gap.
@@ -99,14 +99,17 @@ The API serializes results; it does not interpret scientific claims.
 3. Research executes the plan's queries concurrently, deduplicates their papers and records
    partial failures; emit `papers`.
 4. Synthesis writes a draft from the question and retrieved papers. The citation checker records
-   unknown author/year references. This draft is not streamed.
+   unknown author/year references. Emit `synthesis` (the draft) at once.
 5. Verification uses a forced tool call to assess claims and return evidence. Domain validation
-   rejects invented spans, indices and quotes and computes the report status.
-6. With usable abstracts, any status other than `no_issues_found`, or unmatched citations,
-   triggers one synthesis revision using the question, original papers, draft and report.
-   The citation checker runs again, then the verifier assesses the entire revised text.
-7. Emit the final `synthesis`, its corresponding `verification`, and `done`. Only the last
-   report is exposed; unresolved scientific issues remain visible. No further revision occurs.
+   flags invented spans, indices and quotes and computes the report status; emit `verification`.
+   A report that fails validation degrades to `not_verifiable` instead of failing the run.
+6. If the report `needs_revision` (a non-supported claim, counterevidence, a non-ambiguity
+   finding or unmatched citations), run one synthesis revision using the question, papers,
+   draft and report. The citation checker runs again; a revision with more unmatched citations
+   than the draft is discarded. Otherwise the verifier assesses the whole revised text.
+7. An accepted revision is emitted as a second `synthesis` (`revision: true`) followed by its
+   `verification` (`revision_count` 1); the client replaces the draft. Then `done`. If the
+   revision or its re-verification fails, the draft stays and the run still ends with `done`.
 
 The stages within one request are sequential. Only OpenAlex queries within Research run in
 parallel. Separate requests can overlap; the LLM semaphore is shared across the pipeline's
@@ -116,9 +119,10 @@ The retrieval CLI runs only planning and research, not the synthesis/verificatio
 
 ### Streaming and failures
 
-Success events: `plan` → `papers` → `synthesis` → `verification` → `done`.
+Success events: `plan` → `papers` → `synthesis` → `verification` → `done`, plus a second
+`synthesis` → `verification` pair when a revision is accepted.
 Each event contains a serialized model; `done` has `{}`. LLM text is not streamed token by token.
-The final synthesis waits for all verification/revision work, so there may be a pause after papers.
+The draft synthesis streams as soon as it exists; only the revised pair waits for the extra calls.
 
 | Condition | Behavior visible to the client |
 |---|---|
@@ -129,9 +133,10 @@ The final synthesis waits for all verification/revision work, so there may be a 
 | All OpenAlex queries fail | `plan` then `error`; no `papers`. |
 | Some queries fail and successful queries return no papers | Emit `papers` then `error`; do not present this as a complete empty search. |
 | Search succeeds but returns no papers, or no usable abstracts | Deterministic insufficient-evidence synthesis and `not_verifiable` report, then `done`; no synthesis/verifier LLM calls or revision. |
-| Initial synthesis, revision or either verification call fails | Earlier `plan`/`papers` may exist; then `error`, without final synthesis, report or `done`. |
-| Report references missing claim text, unknown paper indices or absent abstract quotes | `LLMError` and terminal `error`; do not accept fabricated provenance. |
-| Claims are partial, contradicted or unsupported; counterevidence/findings/ambiguous or unknown citations exist | Revise once and re-verify. Remaining problems are delivered with the final report and `done`. |
+| Initial synthesis or the first verification call fails | Earlier events may exist (the draft `synthesis` if it was produced); then `error`, without `done`. |
+| Revision or its re-verification fails | Logged; the draft and its report stand, then `done`. |
+| Report references missing claim text, unknown paper indices or absent abstract quotes | Report rejected: `not_verifiable` ("Verifier output failed validation"); fabricated provenance is never accepted. |
+| Claims are partial, contradicted or unsupported; counterevidence/findings/ambiguous or unknown citations exist | Revise once and re-verify (ambiguity alone does not trigger a revision). Remaining problems stay visible in the report. |
 | Empty claim assessments with usable abstracts | `not_verifiable`, one revision/re-verification; still never treated as approval if empty afterward. |
 | Unexpected exception inside the pipeline | Log the exception and emit a generic `Unexpected internal error`; no `done`. |
 
@@ -238,7 +243,7 @@ Planned frontend: vanilla HTML/CSS/JS served by FastAPI, no framework or build s
 A distinctive visual identity drawn from the domain: academic research, citations, traceability.
 Think library catalog cards, footnotes, citation trails, the margin notes of a paper. Avoid generic SaaS
 looks: no identical rounded cards, no decorative gradients, no cream+terracotta "AI" palette.
-The planned UI shows plan, papers, final synthesis and verification as SSE events arrive.
+The planned UI shows plan, papers, draft synthesis and verification as SSE events arrive, and replaces the draft when a `revision: true` synthesis arrives.
 Every citation in the synthesis links to the paper it came from. The `frontend-design` skill is used
 before any CSS is written.
 
@@ -270,10 +275,10 @@ before any CSS is written.
 
 ### Approved verification extension
 
-The draft stays internal. The verifier uses forced tool calling through `LLMClient`, with literal
+The draft is streamed and may be replaced once by a revision. The verifier uses forced tool calling through `LLMClient`, with literal
 claim spans and abstract quotes validated in `domain/`. Non-supported claims, findings, empty
-assessments or unmatched citations trigger one revision and full re-verification. The final report
-alone is delivered, including remaining issues. Technical failure ends with `error` and no `done`.
+assessments or unmatched citations trigger one revision and full re-verification. Remaining issues stay visible. A failed first
+synthesis or verification ends with `error` and no `done`; a failed revision keeps the draft.
 Missing usable abstracts skip synthesis/verification LLM calls. Empty assessments never pass.
 `VERIFICATION_MODEL` defaults to the effective synthesis model and shares the concurrency cap.
 This is not proof of claim truth: the LLM may omit claims or misjudge support, and abstracts are

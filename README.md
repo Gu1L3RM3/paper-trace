@@ -54,17 +54,17 @@ result to the pipeline, never directly to another agent.
 | Synthesis | Question and papers | Internal draft with citation check | LLM completion |
 | Verification | Question, draft and papers | Claim/evidence report | LLM tool call and domain validation |
 
-The pipeline requests at most one revision and full re-verification before streaming the final
-synthesis and matching report. Stages within a request are sequential; only Research's OpenAlex
+The pipeline requests at most one revision and full re-verification after streaming the draft;
+an accepted revision arrives as a second `synthesis` (`revision: true`) and `verification`. Stages within a request are sequential; only Research's OpenAlex
 queries run in parallel. Separate API requests can overlap under the shared LLM semaphore.
 Research uses no LLM. The retrieval CLI runs only planning and research.
 
 Partial search failures can continue when papers were retrieved, with `failed_queries` exposed.
 All-query failure is terminal. No papers plus partial failure is terminal too; a successful empty
 search instead returns insufficient evidence. Missing usable abstracts skip both synthesis and
-verification LLM calls. A synthesis/revision/verifier technical failure emits `error` without a
-final answer or `done`. Remaining scientific concerns after one revision are delivered with the
-final report and `done`.
+verification LLM calls. A synthesis or first-verification technical failure emits `error` without `done`; a failed
+revision keeps the draft. Invalid verifier reports become `not_verifiable`. Remaining scientific
+concerns after one revision stay visible in the report.
 
 The built-in LLM adapter retries transport failures and HTTP 429/500/502/503/504 up to three
 attempts, with 1s and 2s backoff. Invalid credentials, invalid tool output and fabricated report
@@ -88,10 +88,9 @@ is optional for keyless local servers.
 
 ## Abstract evidence verification
 
-The API keeps the draft internal, verifies its factual claims against retrieved abstracts, and
-revises at most once before verifying the final text again. Only the final synthesis and its
-corresponding verification report are streamed. Verification failures emit `error`, without a
-final synthesis or `done`. Persistent scientific issues are delivered explicitly in the report.
+The API streams the draft, verifies its factual claims against retrieved abstracts, and revises
+at most once, verifying the revised text again. A failed first verification emits `error` without
+`done`; a failed revision keeps the draft. Persistent scientific issues stay visible in the report.
 `done` means processing completed, not that scientific correctness is guaranteed.
 The current `insufficient_evidence` flag indicates missing usable abstracts; it does not summarize
 semantic verification findings. Inspect the report even when that flag is false.
