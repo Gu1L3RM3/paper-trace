@@ -13,6 +13,28 @@ _TIMEOUT = 120.0  # local models can be slow
 _ATTEMPTS = 3
 _BACKOFF = 1.0  # seconds, doubled after each failed attempt
 _RETRYABLE_STATUS = {429, 500, 502, 503, 504}
+# Keywords that strict / structured-output decoders reject; ToolSpec.output still enforces them.
+_UNSUPPORTED = {"minLength", "maxLength", "minimum", "maximum", "exclusiveMinimum", "maxItems"}
+
+
+def _clean(node: Any) -> Any:
+    if isinstance(node, list):
+        return [_clean(item) for item in node]
+    if not isinstance(node, dict):
+        return node
+    cleaned = {
+        key: _clean(value)
+        for key, value in node.items()
+        if key not in _UNSUPPORTED and not (key == "minItems" and value > 1)
+    }
+    if "properties" in cleaned:
+        cleaned["additionalProperties"] = False
+    return cleaned
+
+
+def tool_parameters(model: type[BaseModel]) -> dict[str, Any]:
+    """JSON Schema sent to the provider: portable across strict decoders, validated locally."""
+    return _clean(model.model_json_schema())  # type: ignore[no-any-return]
 
 
 class HttpLLMClient:
@@ -48,7 +70,7 @@ class HttpLLMClient:
                     "function": {
                         "name": tool.name,
                         "description": tool.description,
-                        "parameters": tool.output.model_json_schema(),
+                        "parameters": tool_parameters(tool.output),
                     },
                 }
             ],

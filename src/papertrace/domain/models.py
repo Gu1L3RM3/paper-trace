@@ -13,12 +13,19 @@ class ResearchQuestion(BaseModel):
 
 
 class SearchQuery(BaseModel):
-    query: _Text
-    angle: str
+    query: _Text = Field(
+        description="English keywords for a scholarly search engine, 4 to 8 words, not a sentence."
+    )
+    angle: str = Field(description="Short label of what this query covers, e.g. 'mechanism'.")
 
 
 class SearchPlan(BaseModel):
-    queries: Annotated[list[SearchQuery], Field(min_length=2, max_length=4)]
+    queries: Annotated[
+        list[SearchQuery],
+        Field(
+            min_length=2, max_length=4, description="2 to 4 queries, each with a distinct angle."
+        ),
+    ]
 
 
 class Paper(BaseModel):
