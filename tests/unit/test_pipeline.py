@@ -160,51 +160,37 @@ class _Verifier:
         )
 
 
-async def test_revision_is_bounded_and_only_final_is_emitted() -> None:
-    class Revising(_Synthesizer):
-        calls = 0
-
-        async def revise(
-            self,
-            question: ResearchQuestion,
-            papers: list[Paper],
-            synthesis: SynthesisResult,
-            verification: VerificationResult,
-        ) -> SynthesisResult:
-            self.calls += 1
-            return synthesis.model_copy(update={"markdown": "final"})
-
-    synth = Revising()
-    from tests.fakes import papers
-
-    class RealResearcher(_Researcher):
-        async def research(self, plan: SearchPlan) -> ResearchResult:
-            return ResearchResult(papers=papers(), failed_queries=[])
-
+async def test_draft_streams_first_then_one_revised_pair() -> None:
+    synth = _CountingRevisions([])
     verifier = _Verifier("issues_found")
-    events = await _run(Pipeline(_Planner(), RealResearcher(), synth, verifier))
-    assert [e.name for e in events] == ["plan", "papers", "synthesis", "verification", "done"]
-    assert isinstance(events[2].payload, SynthesisResult)
+    events = await _run(Pipeline(_Planner(), _RealResearcher(), synth, verifier))
+    assert [e.name for e in events] == [
+        "plan",
+        "papers",
+        "synthesis",
+        "verification",
+        "synthesis",
+        "verification",
+        "done",
+    ]
+    draft, revised = events[2].payload, events[4].payload
+    assert isinstance(draft, SynthesisResult) and isinstance(revised, SynthesisResult)
+    assert draft.markdown != "revised" and not draft.revision
+    assert revised.markdown == "revised" and revised.revision
     assert isinstance(events[3].payload, VerificationResult)
-    assert events[2].payload.markdown == "final"
-    assert events[3].payload.revision_count == 1
+    assert isinstance(events[5].payload, VerificationResult)
+    assert events[3].payload.revision_count == 0 and events[5].payload.revision_count == 1
     assert synth.calls == 1 and verifier.calls == 2
 
 
-async def test_verifier_error_hides_draft() -> None:
+async def test_verifier_error_follows_the_streamed_draft() -> None:
     events = await _run(
         Pipeline(_Planner(), _Researcher(), _Synthesizer(), _Verifier(error=LLMError("down")))
     )
-    assert [e.name for e in events] == ["plan", "papers", "error"]
+    assert [e.name for e in events] == ["plan", "papers", "synthesis", "error"]
 
 
-async def test_second_verification_and_revision_failures_hide_final() -> None:
-    from tests.fakes import papers
-
-    class RealResearcher(_Researcher):
-        async def research(self, plan: SearchPlan) -> ResearchResult:
-            return ResearchResult(papers=papers(), failed_queries=[])
-
+async def test_revision_failures_keep_the_draft_and_finish() -> None:
     class SecondFailure(_Verifier):
         async def verify(
             self, question: ResearchQuestion, synthesis: SynthesisResult, papers: list[Paper]
@@ -227,8 +213,8 @@ async def test_second_verification_and_revision_failures_hide_final() -> None:
         (_Synthesizer(), SecondFailure("issues_found")),
         (RevisionFailure(), _Verifier("issues_found")),
     ]:
-        events = await _run(Pipeline(_Planner(), RealResearcher(), synth, verifier))
-        assert [e.name for e in events] == ["plan", "papers", "error"]
+        events = await _run(Pipeline(_Planner(), _RealResearcher(), synth, verifier))
+        assert [e.name for e in events] == ["plan", "papers", "synthesis", "verification", "done"]
 
 
 class _CountingRevisions(_Synthesizer):

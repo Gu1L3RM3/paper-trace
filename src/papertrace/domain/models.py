@@ -48,3 +48,5 @@ class SynthesisResult(BaseModel):
     # Citations in the text that no retrieved paper backs (see domain/citations.py).
     unmatched_citations: list[str]
     insufficient_evidence: bool
+    # True on the single revised text that replaces the draft already streamed.
+    revision: bool = False
