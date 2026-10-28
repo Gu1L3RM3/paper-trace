@@ -31,10 +31,10 @@ src/papertrace/
   domain/      Pydantic models + pure functions. No I/O, no SDK imports.
   llm/         LLMClient port, provider adapters, factory.
   sources/     PaperSource port, OpenAlex adapter.
-  agents/      Orchestrator, Research, Synthesis. Depend on ports only.
-  pipeline.py  Runs the 3 stages, yields typed StageEvents.
+  agents/      Orchestrator, Research, Synthesis, Verification. Depend on ports only.
+  pipeline.py  Coordinates 4 agents and one revision maximum; yields typed StageEvents.
   api/         FastAPI app, routes, SSE, dependencies.py (composition root).
-  web/static/  index.html, styles.css, app.js (no framework, no build).
+  web/static/  Planned frontend: index.html, styles.css, app.js (no build).
 tests/
   unit/  contract/  integration/
 ```
@@ -65,7 +65,8 @@ Additional rules:
 
 Generic, provider-agnostic variables (see `.env.example`):
 `LLM_BASE_URL`, `LLM_MODEL`, optional `LLM_API_KEY`, `LLM_PROVIDER`,
-`ORCHESTRATOR_MODEL`, `SYNTHESIS_MODEL`, `LLM_MAX_CONCURRENCY`, `OPENALEX_MAILTO`.
+`ORCHESTRATOR_MODEL`, `SYNTHESIS_MODEL`, `VERIFICATION_MODEL`, `LLM_MAX_CONCURRENCY`,
+`OPENALEX_MAILTO`.
 Never commit `.env`. Never print or log keys.
 
 ## TDD workflow (mandatory)
@@ -92,7 +93,9 @@ Testing rules:
   insufficient; do not generalize beyond the abstracts.
 - The deterministic citation check in `domain/` must run on every synthesis; mismatches are returned
   in `unmatched_citations`, never hidden.
-- Empty paper list → `insufficient_evidence=True` without calling the LLM.
+- Empty paper list or no usable abstracts → `insufficient_evidence=True` without calling the LLM.
+- Agents return to the pipeline, which alone coordinates one revision and re-verification.
+- Stream only final synthesis/report; technical failures emit `error` without `done`.
 
 ## Scope guard (v1)
 

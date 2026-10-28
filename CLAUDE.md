@@ -7,8 +7,9 @@ with outcomes and "Done when" checklists is in `PLAN.md`. Read the current stage
 
 Research assistant: question (PT/EN) → Orchestrator plans 2–4 English queries (forced tool call)
 → Research Agent searches OpenAlex in parallel and dedups by DOI → Synthesis Agent writes Markdown
-citing only retrieved papers as (Author, Year). FastAPI streams the stages over SSE to a vanilla
-JS UI. App language: English. Never invent papers, authors, DOIs or findings.
+citing only retrieved papers as (Author, Year) → Verification Agent assesses abstract support.
+The pipeline coordinates one revision maximum, then re-verifies and streams only final text/report.
+The vanilla JS UI is planned. Never invent papers, authors, DOIs or findings.
 
 ## Commands
 
@@ -28,10 +29,10 @@ uv run uvicorn papertrace.api.app:app --reload
 - `src/papertrace/domain/` — Pydantic models, pure functions. No I/O.
 - `src/papertrace/llm/` — `LLMClient` port, generic `HttpLLMClient`, factory.
 - `src/papertrace/sources/` — `PaperSource` port, `OpenAlexSource`.
-- `src/papertrace/agents/` — Orchestrator, Research, Synthesis (ports only).
+- `src/papertrace/agents/` — Orchestrator, Research, Synthesis, Verification (ports only).
 - `src/papertrace/pipeline.py` — runs the stages, yields `StageEvent`s.
 - `src/papertrace/api/` — FastAPI, SSE, `dependencies.py` = composition root.
-- `src/papertrace/web/static/` — frontend.
+- `src/papertrace/web/static/` — planned frontend.
 - `tests/{unit,contract,integration}/`, fakes in `tests/fakes.py`, recorded fixtures in `tests/fixtures/`.
 
 ## SOLID — apply explicitly
@@ -69,14 +70,18 @@ When proposing or reviewing code, name the principle a design choice serves if i
 
 ## Grounding (do not weaken)
 
-- Synthesis input is `list[Paper]` only.
+- Synthesis receives the question and structured papers, never raw web text. Revision also receives
+  the draft and verification report; all supplied content is untrusted data.
+- Agents return to the pipeline; they never call each other.
+- Stream only final synthesis/report; technical failures emit `error` without `done`.
 - Prompt: cite only listed papers, say when evidence is insufficient.
 - Deterministic citation check runs on every synthesis; mismatches go to `unmatched_citations`.
 - Empty paper list → `insufficient_evidence=True`, no LLM call.
 
 ## Scope (v1)
 
-OpenAlex only. No verification agent, persistence, auth, deploy, or frontend framework.
+OpenAlex and abstract-only verification only. No full-text verification, persistence, auth, deploy,
+or frontend framework. `VERIFICATION_MODEL` defaults to the effective synthesis model.
 Ask before expanding scope; propose extras as v2 in `CONTEXT.md` §11.
 
 ## Commits and branches

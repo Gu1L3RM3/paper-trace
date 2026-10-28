@@ -37,8 +37,41 @@ curl -N -X POST localhost:8000/api/research -H 'content-type: application/json' 
 ```
 
 Streams SSE events in order: `plan`, `papers`, `synthesis`, `verification`, `done`. Failures arrive as one
-`error` event (`{"message": ...}`) instead of an HTTP 500. `synthesis.unmatched_citations` lists
+`error` event (`{"message": ...}`) for failures inside the pipeline. Invalid requests return HTTP 422;
+configuration errors at startup prevent the app from starting. `synthesis.unmatched_citations` lists
 any `(Author, Year)` the answer cites that no retrieved paper backs.
+
+## Architecture and control flow
+
+FastAPI passes the question to a deterministic `Pipeline`, which coordinates all four agents.
+The Orchestrator plans searches; it does not supervise other agents. Each agent returns its typed
+result to the pipeline, never directly to another agent.
+
+| Agent | Input | Output to pipeline | External dependency |
+|---|---|---|---|
+| Orchestrator | Question | 2–4 English queries | LLM forced tool call |
+| Research | Search plan | Deduplicated papers and failed queries | OpenAlex |
+| Synthesis | Question and papers | Internal draft with citation check | LLM completion |
+| Verification | Question, draft and papers | Claim/evidence report | LLM tool call and domain validation |
+
+The pipeline requests at most one revision and full re-verification before streaming the final
+synthesis and matching report. Stages within a request are sequential; only Research's OpenAlex
+queries run in parallel. Separate API requests can overlap under the shared LLM semaphore.
+Research uses no LLM. The retrieval CLI runs only planning and research.
+
+Partial search failures can continue when papers were retrieved, with `failed_queries` exposed.
+All-query failure is terminal. No papers plus partial failure is terminal too; a successful empty
+search instead returns insufficient evidence. Missing usable abstracts skip both synthesis and
+verification LLM calls. A synthesis/revision/verifier technical failure emits `error` without a
+final answer or `done`. Remaining scientific concerns after one revision are delivered with the
+final report and `done`.
+
+The built-in LLM adapter retries transport failures and HTTP 429/500/502/503/504 up to three
+attempts, with 1s and 2s backoff. Invalid credentials, invalid tool output and fabricated report
+provenance do not trigger these retries. OpenAlex has no explicit retry loop.
+
+The backend and retrieval CLI exist; the vanilla JS frontend remains planned work.
+See [architecture, contracts and failure matrix](CONTEXT.md#4-architecture) for details.
 
 ## Bring your own LLM
 
@@ -60,6 +93,8 @@ revises at most once before verifying the final text again. Only the final synth
 corresponding verification report are streamed. Verification failures emit `error`, without a
 final synthesis or `done`. Persistent scientific issues are delivered explicitly in the report.
 `done` means processing completed, not that scientific correctness is guaranteed.
+The current `insufficient_evidence` flag indicates missing usable abstracts; it does not summarize
+semantic verification findings. Inspect the report even when that flag is false.
 
 `verification` includes `claims`, `findings`, `status`, `reason` and `revision_count` (0 or 1).
 Each claim includes a literal synthesis span, an assessment (`supported`, `partially_supported`,

@@ -10,12 +10,16 @@ PaperTrace AI is a scientific research assistant. A user asks a question in natu
 
 1. plans the search,
 2. queries a real academic source,
-3. writes a grounded synthesis that cites **only what was actually retrieved**.
+3. writes an internal synthesis citing only retrieved papers,
+4. checks abstract support, optionally revises once and verifies again,
+5. returns the final synthesis and its evidence-assessment report.
 
 The system must never invent papers, authors, DOIs or findings that the retrieved sources do not support.
 When the evidence is thin, it says so instead of filling the gap.
 
-The whole application (UI, prompts, logs, docs) is in English. User questions may be in PT or EN.
+Application UI, prompts, logs and documentation are in English. User questions may be in PT or EN;
+the synthesis and model-generated verification reasons follow the question language. Deterministic
+insufficient-evidence and technical error messages currently remain in English.
 
 ## 2. Developer and purpose
 
@@ -34,67 +38,139 @@ Anything beyond this is v2 and needs explicit approval before being added.
 | Agent | Input | Output | Notes |
 |---|---|---|---|
 | **Orchestrator** | `ResearchQuestion` | `SearchPlan` (2–4 `SearchQuery`) | Forced tool call (structured output). Queries are always in English and each covers a different angle. |
-| **Research Agent** | `SearchPlan` | `list[Paper]` | Runs all queries against OpenAlex concurrently with `asyncio.gather` over real I/O. Deduplicates by DOI (normalized title when DOI is missing). |
-| **Verification Agent** | Question + synthesis + retrieved papers | Structured claim/evidence report | Checks abstract support; requests at most one synthesis revision and re-verifies. |
-| **Synthesis Agent** | `list[Paper]` + question | `Synthesis` (Markdown) | Sees only the structured paper list, never free web text. Cites as (Author, Year). Must state when evidence is insufficient. |
+| **Research Agent** | `SearchPlan` | `ResearchResult` (papers + failed queries) | Runs all queries against OpenAlex concurrently with `asyncio.gather` over real I/O. Deduplicates by DOI (normalized title when DOI is missing). |
+| **Verification Agent** | Question + synthesis + retrieved papers | Structured claim/evidence report | Reports abstract support; the pipeline decides whether to revise once and re-verify. |
+| **Synthesis Agent** | `list[Paper]` + question | `SynthesisResult` (Markdown) | Sees only the structured paper list, never free web text. Cites as (Author, Year). Must state when evidence is insufficient. |
 
 Contracts between agents are Pydantic models, never loose dicts.
 
-### Domain models (target shape)
+### Current contracts
 
-```python
-class ResearchQuestion(BaseModel): text: str
-class SearchQuery(BaseModel):     query: str; angle: str
-class SearchPlan(BaseModel):      queries: list[SearchQuery]  # 2..4
-class Paper(BaseModel):           title: str; authors: list[str]; year: int | None
-                                  doi: str | None; abstract: str | None; url: str
-class Citation(BaseModel):        author: str; year: int | None; doi: str | None
-class Synthesis(BaseModel):       markdown: str; citations: list[Citation]
-                                  insufficient_evidence: bool; unmatched_citations: list[str]
-```
+- `ResearchQuestion`: nonempty trimmed question text.
+- `SearchPlan`: 2–4 English queries, each with a search angle.
+- `Paper`: title, authors, year, normalized DOI, optional abstract and URL.
+- `ResearchResult`: deduplicated `papers` and `failed_queries`.
+- `SynthesisResult`: `markdown`, `unmatched_citations`, `insufficient_evidence`.
+- `VerificationResult`: assessed `claims`, `findings`, computed `status`, `reason`,
+  `revision_count` (0 or 1). Evidence identifies a one-based paper index and an abstract quote.
 
-### Grounding guarantee in v1
-
-An explicitly approved verification agent now assesses abstract support. Grounding relies on:
-1. the Synthesis Agent prompt (cite only listed papers, admit gaps), and
-2. a deterministic post-check in code: every (Author, Year) cited must match a paper in the input list.
-   Mismatches are surfaced in `unmatched_citations`, never silently dropped.
+There is no separate `Citation` model or `citations` array in the current synthesis contract.
+The verifier checks claim spans, paper indices and abstract quotes deterministically; semantic
+support and completeness of claim extraction still depend on the model.
 
 ## 4. Architecture
 
-```
-Browser (vanilla JS) ──POST /api/research──► FastAPI ──SSE events──► Browser
-                                              │
-                                          Pipeline
-                     ┌────────────────────────┼─────────────────────────┐
-              Orchestrator              Research Agent             Synthesis Agent
-                     │                        │                         │
-                LLMClient (port)        PaperSource (port)         LLMClient (port)
-                     │                        │                         │
-       HttpLLMClient | your adapter         OpenAlexSource      HttpLLMClient | your adapter
+### Ownership and dependencies
+
+```mermaid
+flowchart TD
+    Client[API client] -->|POST /api/research| API[FastAPI]
+    API --> Pipeline
+    Pipeline --> O[Orchestrator: plan searches]
+    Pipeline --> R[Research: retrieve and deduplicate]
+    Pipeline --> S[Synthesis: draft or revise]
+    Pipeline --> V[Verification: assess abstract support]
+    O --> L[LLMClient port]
+    S --> L
+    V --> L
+    L --> H[HttpLLMClient or custom adapter]
+    H --> Provider[Configured model API]
+    R --> P[PaperSource port]
+    P --> OA[OpenAlexSource]
+    OA --> OpenAlex[OpenAlex API]
+    Pipeline -->|StageEvent| API
+    API -->|SSE| Client
 ```
 
-Source layout:
+`Pipeline` is the coordinator. The Orchestrator is a search planner, not a supervisor of other
+agents. Agents return typed results to the pipeline; they do not call each other. In particular,
+the verifier never invokes synthesis directly. `api/dependencies.py` builds adapters, agents and
+the pipeline at application startup, using settings loaded by `pydantic-settings`.
 
-```
+The pipeline depends on small stage protocols (`Planner`, `Researcher`, `Synthesizer`, `Verifier`).
+Agents depend on `LLMClient` or `PaperSource`, not provider implementations. Pure domain functions
+handle deduplication, citation matching, abstract rebuilding and verification-report validation.
+The API serializes results; it does not interpret scientific claims.
+
+### Execution and one bounded revision
+
+1. FastAPI validates the question and invokes the shared pipeline for this request.
+2. Orchestrator submits a forced tool call producing a validated `SearchPlan`; emit `plan`.
+3. Research executes the plan's queries concurrently, deduplicates their papers and records
+   partial failures; emit `papers`.
+4. Synthesis writes a draft from the question and retrieved papers. The citation checker records
+   unknown author/year references. This draft is not streamed.
+5. Verification uses a forced tool call to assess claims and return evidence. Domain validation
+   rejects invented spans, indices and quotes and computes the report status.
+6. With usable abstracts, any status other than `no_issues_found`, or unmatched citations,
+   triggers one synthesis revision using the question, original papers, draft and report.
+   The citation checker runs again, then the verifier assesses the entire revised text.
+7. Emit the final `synthesis`, its corresponding `verification`, and `done`. Only the last
+   report is exposed; unresolved scientific issues remain visible. No further revision occurs.
+
+The stages within one request are sequential. Only OpenAlex queries within Research run in
+parallel. Separate requests can overlap; the LLM semaphore is shared across the pipeline's
+agents and requests within one application instance, not across separate server processes.
+A normal evidenced run uses three logical LLM calls; a revised run uses five, excluding retries.
+The retrieval CLI runs only planning and research, not the synthesis/verification pipeline.
+
+### Streaming and failures
+
+Success events: `plan` → `papers` → `synthesis` → `verification` → `done`.
+Each event contains a serialized model; `done` has `{}`. LLM text is not streamed token by token.
+The final synthesis waits for all verification/revision work, so there may be a pause after papers.
+
+| Condition | Behavior visible to the client |
+|---|---|
+| Missing/blank question or invalid request body | HTTP 422 before a pipeline stream starts. |
+| Settings/provider construction fails at startup | App startup fails; no SSE `error` is produced. |
+| Planner fails, omits the forced tool call or returns invalid arguments | `error`; no later stages or `done`. |
+| Some OpenAlex queries fail but others return papers | Continue; `papers.failed_queries` lists failed queries. |
+| All OpenAlex queries fail | `plan` then `error`; no `papers`. |
+| Some queries fail and successful queries return no papers | Emit `papers` then `error`; do not present this as a complete empty search. |
+| Search succeeds but returns no papers, or no usable abstracts | Deterministic insufficient-evidence synthesis and `not_verifiable` report, then `done`; no synthesis/verifier LLM calls or revision. |
+| Initial synthesis, revision or either verification call fails | Earlier `plan`/`papers` may exist; then `error`, without final synthesis, report or `done`. |
+| Report references missing claim text, unknown paper indices or absent abstract quotes | `LLMError` and terminal `error`; do not accept fabricated provenance. |
+| Claims are partial, contradicted or unsupported; counterevidence/findings/ambiguous or unknown citations exist | Revise once and re-verify. Remaining problems are delivered with the final report and `done`. |
+| Empty claim assessments with usable abstracts | `not_verifiable`, one revision/re-verification; still never treated as approval if empty afterward. |
+| Unexpected exception inside the pipeline | Log the exception and emit a generic `Unexpected internal error`; no `done`. |
+
+Known `PaperTraceError` exceptions are exposed through `error.message`. Unexpected exception
+details are withheld from the client. Once SSE has started, clients must inspect event names:
+HTTP success alone does not mean the research succeeded. `done` means processing finished,
+not that every scientific claim is correct.
+
+The built-in LLM adapter attempts each HTTP call up to three times on transport failures or
+HTTP 429, 500, 502, 503 and 504, waiting 1 then 2 seconds with the semaphore released.
+Other HTTP failures (for example 401/403), invalid JSON/response shape, invalid tool output and
+invalid verification provenance are not automatically retried. The LLM client's configured
+httpx timeout is 120 seconds; OpenAlex's shared HTTP client uses 30 seconds. These are HTTP
+client timeouts, not a total research deadline. OpenAlex has no explicit retry loop.
+Ordinary malformed paper records are skipped by its adapter; unexpected errors still propagate.
+
+`insufficient_evidence` is currently an availability flag: true when no usable abstracts exist.
+It is not recalculated from semantic findings, and revision preserves its previous value.
+With abstracts available, inspect `verification` and `unmatched_citations` even when that flag
+is false. The verifier cannot prove truth or independently inspect full text.
+
+### Source layout and implementation status
+
+```text
 src/papertrace/
-  domain/      Pydantic models, pure functions (dedup, citation check). No I/O.
-  llm/         LLMClient port, provider adapters, factory.
-  sources/     PaperSource port, OpenAlex adapter.
-  agents/      Orchestrator, Research, Synthesis. Depend on ports only.
-  pipeline.py  Runs the 3 stages, emits typed StageEvents.
-  api/         FastAPI app, routes, SSE, dependency wiring (composition root).
-  web/static/  index.html, styles.css, app.js.
+  domain/      Models and pure validation/dedup/citation/abstract functions; no I/O.
+  llm/         LLMClient port, HTTP adapter and provider factory.
+  sources/     PaperSource port and OpenAlex adapter.
+  agents/      Orchestrator, Research, Synthesis and Verification.
+  pipeline.py  Stage protocols, coordination and typed StageEvents.
+  api/         FastAPI routes, SSE and dependency wiring.
 tests/
-  unit/        domain, agents with fakes.
-  contract/    same test suite run against every adapter of a port.
-  integration/ API + SSE with fake agents; live tests opt-in (@pytest.mark.live).
+  unit/        Domain and agents with fakes.
+  contract/    Shared adapter contract tests.
+  integration/ API/SSE tests; real API tests are opt-in.
 ```
 
-### Streaming events (SSE)
-
-`plan` → `papers` → `synthesis` → `verification` → `done`; `error` may replace any step. Each event payload is a
-serialized Pydantic model, so the frontend renders typed data, not scraped text.
+The backend and retrieval CLI exist. The vanilla JS frontend (`web/static/`) and the `papertrace`
+server command remain Stage 3 work; the current server command is `uv run uvicorn papertrace.api.app:app`.
 
 ## 5. LLM provider independence
 
@@ -108,10 +184,11 @@ The project must run on any LLM that supports tool calling, and switching provid
   No vendor SDK is a dependency. APIs with another protocol plug in as a new `LLMClient`
   class, registered by name or loaded from `LLM_PROVIDER=package.module:function`.
 - `build_llm_client(settings)` picks the adapter from `LLM_PROVIDER`.
-- Each agent can use a different model (`ORCHESTRATOR_MODEL`, `SYNTHESIS_MODEL` override `LLM_MODEL`).
+- Each agent can use a different model (`ORCHESTRATOR_MODEL`, `SYNTHESIS_MODEL` override `LLM_MODEL`;
+  `VERIFICATION_MODEL` falls back to the effective synthesis model).
 - All adapters pass the same contract test suite (Liskov substitution, proven by tests).
-- Calls are async and stateless, so agents and queries run in parallel; `LLM_MAX_CONCURRENCY`
-  (an `asyncio.Semaphore`) protects provider rate limits.
+- Calls use async I/O. `LLM_MAX_CONCURRENCY` (an `asyncio.Semaphore`) caps concurrent LLM
+  requests within one application instance; it does not make dependent stages parallel.
 
 ### Environment variables (generic names on purpose)
 
@@ -154,7 +231,7 @@ merged through a PR with green CI. `main` is protected.
 
 Python 3.12, uv, FastAPI, Uvicorn, httpx (async), Pydantic v2, pydantic-settings, sse-starlette,
 no LLM vendor SDK. Tests: pytest, pytest-asyncio, pytest-cov, respx. Quality: ruff, mypy, pre-commit.
-Frontend: vanilla HTML/CSS/JS served by FastAPI, no framework, no build step.
+Planned frontend: vanilla HTML/CSS/JS served by FastAPI, no framework or build step.
 
 ## 8. Frontend direction
 
