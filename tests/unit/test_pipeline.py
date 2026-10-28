@@ -81,3 +81,24 @@ async def test_failure_becomes_error_event_and_stops_the_run() -> None:
         events = await _run(pipeline)
         assert [e.name for e in events] == expected
         assert events[-1].payload is not None
+
+
+async def test_unexpected_exception_still_becomes_error_event() -> None:
+    events = await _run(
+        Pipeline(_Planner(ValueError("secret detail")), _Researcher(), _Synthesizer())
+    )
+
+    assert [e.name for e in events] == ["error"]
+    assert "secret detail" not in str(events[0].payload)
+
+
+async def test_zero_papers_with_failed_searches_is_an_error_not_missing_evidence() -> None:
+    class _Partial(_Researcher):
+        async def research(self, plan: SearchPlan) -> ResearchResult:
+            return ResearchResult(papers=[], failed_queries=["a"])
+
+    synthesizer = _Synthesizer()
+    events = await _run(Pipeline(_Planner(), _Partial(), synthesizer))
+
+    assert [e.name for e in events] == ["plan", "papers", "error"]
+    assert synthesizer.received is None

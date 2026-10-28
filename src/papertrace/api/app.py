@@ -33,7 +33,7 @@ async def research(
 ) -> EventSourceResponse:
     async def events() -> AsyncIterator[ServerSentEvent]:
         async for event in pipeline.run(question):
-            data = event.payload.model_dump_json() if event.payload else "{}"
+            data = event.payload.model_dump_json() if event.payload is not None else "{}"
             yield ServerSentEvent(data=data, event=event.name)
 
     return EventSourceResponse(events())

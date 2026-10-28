@@ -28,6 +28,13 @@ def dedup_papers(papers: list[Paper]) -> list[Paper]:
     return list(seen.values())
 
 
+_NAME_SUFFIXES = {"jr", "sr", "ii", "iii", "iv"}
+
+
 def surname(author: str) -> str:
+    if "," in author:  # "Last, First"
+        return author.split(",")[0].strip()
     words = author.split()
+    while len(words) > 1 and words[-1].rstrip(".").casefold() in _NAME_SUFFIXES:
+        words.pop()
     return words[-1] if words else ""

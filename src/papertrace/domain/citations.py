@@ -4,9 +4,20 @@ import unicodedata
 from papertrace.domain.models import Paper
 from papertrace.domain.papers import surname
 
-_GROUP = re.compile(r"\(([^()]*\d{4}[^()]*)\)")
-_CITATION = re.compile(r"^(?P<authors>.+?),\s*(?P<year>\d{4})[a-z]?$")
-_AUTHOR_SEPARATOR = re.compile(r"\s+(?:and|&)\s+")
+_YEAR = r"(?:\d{4}[a-z]?|n\.d\.)"
+# "(Smith, 2020)", "(Smith 2020)", "(Smith et al., 2020, p. 5)"; one group may hold several.
+_GROUP = re.compile(r"\(([^()]*)\)")
+_PARENTHETICAL = re.compile(rf"^(?P<authors>.+?),?\s+(?P<year>{_YEAR})(?:,.*)?$")
+# "Smith (2020)", "Smith et al. (2020)", "Smith and Jones (2020)".
+# shortcut: the name must start with an ASCII capital, so narrative "Álvarez (2020)" is
+# not checked; upgrade by testing str.isupper() on a generic word match.
+_TAIL = r"[^\W\d_]*(?:['\u2019-][^\W\d_]+)*"
+_NARRATIVE = re.compile(
+    rf"(?P<authors>(?<![\w])[A-Z]{_TAIL}(?:\s+et al\.?|\s+(?:and|&)\s+[A-Z]{_TAIL})?)"
+    rf"\s+\((?P<year>{_YEAR})\)"
+)
+_ET_AL = re.compile(r"\s+et al\.?.*$")
+_AUTHOR_SEPARATOR = re.compile(r"\s*(?:,|&|\band\b)\s*")
 
 
 def _fold(name: str) -> str:
@@ -14,20 +25,41 @@ def _fold(name: str) -> str:
     return "".join(c for c in decomposed if c.isalpha())
 
 
+def _year(token: str) -> int | None:
+    return None if token == "n.d." else int(token[:4])
+
+
+def _first_author(authors: str) -> str:
+    cited = _ET_AL.sub("", authors.strip())
+    return next((p for p in _AUTHOR_SEPARATOR.split(cited) if p), "")
+
+
+def _mentions(text: str) -> list[tuple[str, str, str]]:
+    """(as written, authors, year token) for every parenthetical and narrative citation."""
+    found: list[tuple[str, str, str]] = []
+    for group in _GROUP.findall(text):
+        for part in (p.strip() for p in group.split(";")):
+            match = _PARENTHETICAL.match(part)
+            # Capitalised start filters out asides such as "(see Fig. 2020)".
+            if match and match["authors"][0].isupper():
+                found.append((part, match["authors"], match["year"]))
+    for match in _NARRATIVE.finditer(text):
+        found.append((f"{match['authors']} ({match['year']})", match["authors"], match["year"]))
+    return found
+
+
 def find_unmatched_citations(text: str, papers: list[Paper]) -> list[str]:
-    """(Author, Year) citations in `text` that no paper in `papers` backs, in first-seen order.
+    """Citations in `text` that no paper in `papers` backs, in first-seen order.
+
+    A citation matches when its first author's surname and year are those of the same paper's
+    first author, as the synthesis prompt requires.
 
     shortcut: matches surname + year only (not title), so two papers sharing both are
     indistinguishable; upgrade if the prompt ever needs disambiguating suffixes.
     """
-    known = {(_fold(surname(a)), p.year) for p in papers for a in p.authors}
+    known = {(_fold(surname(p.authors[0])), p.year) for p in papers if p.authors}
     unmatched: dict[str, None] = {}
-    for group in _GROUP.findall(text):
-        for part in group.split(";"):
-            match = _CITATION.match(part.strip())
-            if not match:
-                continue  # parenthetical that is not a citation, e.g. "(see Fig. 2020)"
-            first = _AUTHOR_SEPARATOR.split(match["authors"])[0].removesuffix(" et al.")
-            if (_fold(surname(first)), int(match["year"])) not in known:
-                unmatched[part.strip()] = None
+    for written, authors, year in _mentions(text):
+        if (_fold(surname(_first_author(authors))), _year(year)) not in known:
+            unmatched[written] = None
     return list(unmatched)

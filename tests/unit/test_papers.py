@@ -1,5 +1,5 @@
 from papertrace.domain.models import Paper
-from papertrace.domain.papers import abstract_from_inverted_index, dedup_papers
+from papertrace.domain.papers import abstract_from_inverted_index, dedup_papers, surname
 
 
 def _paper(title: str, doi: str | None = None) -> Paper:
@@ -39,3 +39,10 @@ def test_dedup_keeps_distinct_non_latin_titles() -> None:
 
 def test_dedup_merges_titles_differing_only_by_accents_and_case() -> None:
     assert len(dedup_papers([_paper("Étude du jeûne"), _paper("ETUDE DU JEUNE")])) == 1
+
+
+def test_surname_handles_suffixes_and_last_first_order() -> None:
+    assert surname("Ana Silva") == "Silva"
+    assert surname("Martin Luther King Jr.") == "King"
+    assert surname("Doe, John") == "Doe"
+    assert surname("") == ""
