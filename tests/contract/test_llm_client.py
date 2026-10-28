@@ -32,6 +32,7 @@ class Provider:
     tool_reply: Callable[[dict[str, object]], dict[str, object]]
     text_reply: Callable[[str], dict[str, object]]
     empty_reply: dict[str, object]
+    no_content_reply: dict[str, object]
 
 
 def _anthropic_message(content: list[dict[str, object]]) -> dict[str, object]:
@@ -60,6 +61,7 @@ ANTHROPIC = Provider(
     ),
     text_reply=lambda text: _anthropic_message([{"type": "text", "text": text}]),
     empty_reply=_anthropic_message([{"type": "text", "text": "no tool"}]),
+    no_content_reply=_anthropic_message([]),
 )
 
 
@@ -100,6 +102,7 @@ OPENAI = Provider(
     ),
     text_reply=lambda text: _chat_completion({"role": "assistant", "content": text}),
     empty_reply=_chat_completion({"role": "assistant", "content": "no tool"}),
+    no_content_reply={**_chat_completion({}), "choices": []},
 )
 
 
@@ -139,3 +142,11 @@ async def test_vendor_http_error_becomes_llm_error(provider: Provider) -> None:
     client = provider.build(_replying(400, {"error": "bad"}))
     with pytest.raises(LLMError):
         await client.complete(system="s", messages=MESSAGES)
+
+
+async def test_response_without_content_becomes_llm_error(provider: Provider) -> None:
+    client = provider.build(_replying(200, provider.no_content_reply))
+    with pytest.raises(LLMError):
+        await client.complete(system="s", messages=MESSAGES)
+    with pytest.raises(LLMError):
+        await client.call_tool(system="s", messages=MESSAGES, tool=TOOL)
