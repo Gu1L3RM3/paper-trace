@@ -134,3 +134,21 @@ One failed source does not discard the other's papers: `failed_queries` names bo
 and query. If no papers arrive and any searches failed, processing ends with an error.
 If all searches succeed but find no usable evidence, the existing insufficient-evidence
 response applies. Source adapters and the combined researcher share the existing typed contracts.
+
+
+### Frontend checks
+The interface uses a local logo, editorial styling, question examples and a four-stage research
+trace. No frontend build step or external fonts are needed.
+
+With the app running and Playwright available in your Node environment, run:
+
+```bash
+PAPERTRACE_URL=http://127.0.0.1:8000 node tests/browser/frontend.cjs
+```
+
+For an existing Playwright installation outside this repository, set `PLAYWRIGHT_MODULE` to
+its module path. Screenshots default to `/tmp/papertrace-ui` (override with
+`PAPERTRACE_SCREENSHOTS`). The browser suite uses recorded real-paper metadata and simulated
+SSE to cover examples, keyboard submission, citations, stage progress, partial failures, empty
+results, errors, revision replacement, retry and four responsive widths. It does not validate
+live model output or source availability.

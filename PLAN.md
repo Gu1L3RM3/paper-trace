@@ -13,7 +13,7 @@ Every stage follows the same rules:
 ---
 
 Current state: retrieval CLI, streaming backend and abstract verification are implemented.
-Live API/manual criteria remain unconfirmed until exercised; the frontend is not implemented.
+Live API/manual criteria remain unconfirmed until exercised; the editorial frontend is implemented.
 See `CONTEXT.md` §4 for actual control flow, retries and failure behavior.
 
 ## Stage 0 — Foundation
@@ -113,7 +113,7 @@ SOLID focus: **S** in the frontend too (render functions per event type, one str
 - [ ] `uv run papertrace` + browser shows the four stages live on a real question.
 - [ ] README steps work from a fresh clone.
 - [ ] CI green, coverage ≥85%.
-- [ ] Manual check at desktop and phone width; keyboard-usable form.
+- [x] Manual check at desktop, tablet and phone width; keyboard-usable form (mocked SSE).
 
 ---
 
@@ -132,7 +132,7 @@ Extra data sources, full-text verification, persistence, auth, deploy. See `CONT
 - [x] Offline flow and provenance tests; coverage at least 85%, mypy and pre-commit.
 - [ ] Live report inspected against real abstracts (opt-in credentials and paid API access).
 
-Frontend remains a separate Stage 3 deliverable. A successful report is an LLM assessment of
+The frontend is implemented; live research validation remains pending. A successful report is an LLM assessment of
 abstract support, not a scientific guarantee. No sources, persistence or full-text fetching added.
 
 
