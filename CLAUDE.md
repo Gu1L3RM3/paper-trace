@@ -78,6 +78,8 @@ When proposing or reviewing code, name the principle a design choice serves if i
   and `verification`. Synthesis or first-verification failures emit `error` without `done`; a failed
   revision keeps the draft. Invalid verifier reports degrade to `not_verifiable`.
 - Prompt: cite only listed papers, say when evidence is insufficient.
+- A bad tool call (invalid arguments, skipped tool) or a rejected verifier report goes back to the
+  model with the error once (`_CORRECTIONS = 1`); a second failure surfaces as today.
 - Deterministic citation check runs on every synthesis; mismatches go to `unmatched_citations`.
 - Empty paper list → `insufficient_evidence=True`, no LLM call.
 
