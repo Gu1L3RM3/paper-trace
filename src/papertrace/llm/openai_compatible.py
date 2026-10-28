@@ -16,6 +16,7 @@ from pydantic import BaseModel, ValidationError
 
 from papertrace.domain.errors import LLMError
 from papertrace.llm.base import Message, ToolSpec
+from papertrace.settings import Settings
 
 
 class OpenAICompatibleClient:
@@ -90,3 +91,12 @@ class OpenAICompatibleClient:
                 )
         except openai.OpenAIError as exc:
             raise LLMError(str(exc)) from exc
+
+
+def build_openai_compatible_client(
+    settings: Settings, model: str, semaphore: asyncio.Semaphore | None
+) -> OpenAICompatibleClient:
+    # Local servers (Ollama, vLLM) ignore the key but the SDK insists on one.
+    key = settings.llm_api_key.get_secret_value() if settings.llm_api_key else "not-needed"
+    sdk = openai.AsyncOpenAI(api_key=key, base_url=settings.llm_base_url)
+    return OpenAICompatibleClient(client=sdk, model=model, semaphore=semaphore)

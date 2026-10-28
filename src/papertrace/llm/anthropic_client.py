@@ -13,6 +13,7 @@ from pydantic import BaseModel, ValidationError
 
 from papertrace.domain.errors import LLMError
 from papertrace.llm.base import Message, ToolSpec
+from papertrace.settings import Settings
 
 _MAX_TOKENS = 4096
 
@@ -79,3 +80,14 @@ class AnthropicClient:
                 )
         except anthropic.AnthropicError as exc:
             raise LLMError(str(exc)) from exc
+
+
+def build_anthropic_client(
+    settings: Settings, model: str, semaphore: asyncio.Semaphore | None
+) -> AnthropicClient:
+    if settings.llm_api_key is None:
+        raise LLMError("LLM_API_KEY is required for the anthropic provider")
+    sdk = anthropic.AsyncAnthropic(
+        api_key=settings.llm_api_key.get_secret_value(), base_url=settings.llm_base_url
+    )
+    return AnthropicClient(client=sdk, model=model, semaphore=semaphore)
