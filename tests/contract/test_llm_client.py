@@ -150,3 +150,57 @@ async def test_api_key_is_optional_and_sent_as_bearer_when_given(provider: Provi
         assert "authorization" not in route.calls.last.request.headers
         await provider.build(http, "secret").complete(system="s", messages=MESSAGES)
         assert route.calls.last.request.headers["authorization"] == "Bearer secret"
+
+
+@pytest.fixture
+def no_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("papertrace.llm.http_client._BACKOFF", 0)
+
+
+@respx.mock
+@pytest.mark.usefixtures("no_backoff")
+@pytest.mark.parametrize(
+    "failure", [httpx.Response(429), httpx.Response(503), httpx.ConnectError("x")]
+)
+async def test_transient_failure_is_retried(
+    provider: Provider, failure: httpx.Response | Exception
+) -> None:
+    ok = httpx.Response(200, json=provider.text_reply("ok"))
+    route = respx.post(provider.url).mock(side_effect=[failure, ok])
+    async with httpx.AsyncClient() as http:
+        assert await provider.build(http, None).complete(system="s", messages=MESSAGES) == "ok"
+    assert route.call_count == 2
+
+
+@respx.mock
+@pytest.mark.usefixtures("no_backoff")
+async def test_retries_are_bounded(provider: Provider) -> None:
+    route = respx.post(provider.url).mock(return_value=httpx.Response(503))
+    async with httpx.AsyncClient() as http:
+        with pytest.raises(LLMError):
+            await provider.build(http, None).complete(system="s", messages=MESSAGES)
+    assert route.call_count == 3
+
+
+@respx.mock
+async def test_client_error_is_not_retried(provider: Provider) -> None:
+    route = _mock(provider, 400, {"error": "bad"})
+    async with httpx.AsyncClient() as http:
+        with pytest.raises(LLMError):
+            await provider.build(http, None).complete(system="s", messages=MESSAGES)
+    assert route.call_count == 1
+
+
+@respx.mock
+async def test_tool_arguments_given_as_object_are_accepted(provider: Provider) -> None:
+    call = {
+        "id": "t1",
+        "type": "function",
+        "function": {"name": "answer", "arguments": {"value": 7}},
+    }
+    _mock(provider, 200, _chat_completion({"role": "assistant", "tool_calls": [call]}))
+    async with httpx.AsyncClient() as http:
+        result = await provider.build(http, None).call_tool(
+            system="s", messages=MESSAGES, tool=TOOL
+        )
+    assert result == Answer(value=7)
