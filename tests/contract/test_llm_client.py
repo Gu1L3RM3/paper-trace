@@ -204,3 +204,16 @@ async def test_tool_arguments_given_as_object_are_accepted(provider: Provider) -
             system="s", messages=MESSAGES, tool=TOOL
         )
     assert result == Answer(value=7)
+
+
+def test_tool_parameters_drop_keywords_strict_decoders_reject() -> None:
+    from papertrace.domain.models import SearchPlan
+    from papertrace.llm.http_client import tool_parameters
+
+    schema = tool_parameters(SearchPlan)
+    text = str(schema)
+
+    assert "minLength" not in text and "maxItems" not in text and "minItems" not in text
+    assert schema["additionalProperties"] is False
+    assert schema["$defs"]["SearchQuery"]["additionalProperties"] is False
+    assert "description" in schema["properties"]["queries"]

@@ -8,27 +8,61 @@ from papertrace.domain.models import Paper, SynthesisResult
 
 
 class EvidenceReference(BaseModel):
-    paper_index: int = Field(ge=1)
-    quote: str = Field(min_length=1)
+    paper_index: int = Field(ge=1, description="One-based index of the paper in the supplied list.")
+    quote: str = Field(
+        min_length=1,
+        description="One contiguous passage copied exactly from that paper's abstract: no "
+        "ellipsis, paraphrase or merged sentences, because it is checked as a literal substring.",
+    )
 
 
 class ClaimAssessment(BaseModel):
-    text: str = Field(min_length=1)
-    assessment: Literal["supported", "partially_supported", "contradicted", "unsupported"]
-    reason: str = Field(min_length=1)
-    evidence: list[EvidenceReference]
-    counterevidence: list[EvidenceReference] = Field(default_factory=list)
+    text: str = Field(
+        min_length=1,
+        description="The claim copied exactly from the synthesis, with its attached citation.",
+    )
+    assessment: Literal["supported", "partially_supported", "contradicted", "unsupported"] = Field(
+        description="supported: the cited abstracts state it. partially_supported: only part of "
+        "it, or a weaker form. contradicted: an abstract states the opposite. unsupported: no "
+        "abstract states it, or it is uncited."
+    )
+    reason: str = Field(
+        min_length=1,
+        description="One or two sentences, in the language of the question, justifying the "
+        "assessment.",
+    )
+    evidence: list[EvidenceReference] = Field(
+        description="Quotes from the papers cited in this claim that back or limit it; empty "
+        "when unsupported."
+    )
+    counterevidence: list[EvidenceReference] = Field(
+        default_factory=list,
+        description="Quotes from any retrieved paper that contradict or qualify the claim.",
+    )
 
 
 class VerificationFinding(BaseModel):
-    kind: Literal["omission", "contradiction", "ambiguous_citation"]
-    reason: str = Field(min_length=1)
-    evidence: list[EvidenceReference]
+    kind: Literal["omission", "contradiction", "ambiguous_citation"] = Field(
+        description="omission: a relevant result the synthesis leaves out. contradiction: "
+        "abstracts conflict on a point the synthesis presents as settled. ambiguous_citation: "
+        "author and year match more than one retrieved paper."
+    )
+    reason: str = Field(
+        min_length=1, description="One or two sentences, in the language of the question."
+    )
+    evidence: list[EvidenceReference] = Field(
+        description="Quotes that back the finding; may be empty only for ambiguous_citation."
+    )
 
 
 class VerificationReport(BaseModel):
-    claims: list[ClaimAssessment]
-    findings: list[VerificationFinding]
+    claims: list[ClaimAssessment] = Field(
+        description="Every relevant factual claim of the synthesis, uncited ones included."
+    )
+    findings: list[VerificationFinding] = Field(
+        description="Omitted results, contradictions between abstracts and gaps in answering "
+        "the question."
+    )
 
 
 class VerificationResult(VerificationReport):

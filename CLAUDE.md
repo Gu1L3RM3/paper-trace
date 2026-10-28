@@ -21,6 +21,7 @@ uv run pytest --cov                # ≥85% required
 uv run ruff check --fix . && uv run ruff format .
 uv run mypy
 uv run pre-commit run --all-files
+uv run python tools/prompt_eval/run.py --out report.html   # prompt/tool/schema lint + 12 live cases
 uv run uvicorn papertrace.api.app:app --reload
 ```
 
