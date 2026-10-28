@@ -31,6 +31,6 @@ async def test_question_in_portuguese_yields_real_papers() -> None:
         ResearchQuestion(text="O jejum intermitente melhora a memória?")
     )
     async with httpx.AsyncClient(timeout=30) as http:
-        papers = await ResearchAgent(OpenAlexSource(client=http)).research(plan)
+        result = await ResearchAgent(OpenAlexSource(client=http)).research(plan)
     assert 2 <= len(plan.queries) <= 4
-    assert papers
+    assert result.papers
