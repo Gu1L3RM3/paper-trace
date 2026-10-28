@@ -2,7 +2,7 @@ import asyncio
 
 from pydantic import BaseModel
 
-from papertrace.domain.models import Paper
+from papertrace.domain.models import Paper, ResearchQuestion
 from papertrace.llm.base import Message, ToolSpec
 
 
@@ -38,3 +38,10 @@ class FakePaperSource:
         if isinstance(result, Exception):
             raise result
         return result
+
+
+def build_fake_llm(
+    settings: object, model: str, semaphore: asyncio.Semaphore | None
+) -> FakeLLMClient:
+    """Plugin entry point used to prove providers can live outside the package."""
+    return FakeLLMClient(ResearchQuestion(text="x"), text=f"model={model}")
