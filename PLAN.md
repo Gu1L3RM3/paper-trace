@@ -58,8 +58,8 @@ SOLID focus: **D** (agents get ports by constructor), **L** (contract tests per 
 **Done when:**
 - [ ] CLI prints real papers with `LLM_PROVIDER=anthropic` and with `LLM_PROVIDER=openai_compatible`,
       changing only `.env`.
-- [ ] Both LLM adapters pass the same contract suite.
-- [ ] Concurrency test proves queries run in parallel.
+- [x] Both LLM adapters pass the same contract suite.
+- [x] Concurrency test proves queries run in parallel.
 - [ ] Opt-in live test (`pytest -m live`) passes locally; CI stays offline.
 
 ---
