@@ -1,9 +1,11 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Annotated
 
 import httpx
 from fastapi import Depends, FastAPI
+from fastapi.staticfiles import StaticFiles
 from sse_starlette import EventSourceResponse, ServerSentEvent
 
 from papertrace.api.dependencies import build_pipeline, get_pipeline
@@ -37,3 +39,7 @@ async def research(
             yield ServerSentEvent(data=data, event=event.name)
 
     return EventSourceResponse(events())
+
+
+# Mounted last so it never shadows the API routes.
+app.mount("/", StaticFiles(directory=Path(__file__).parent.parent / "web" / "static", html=True))

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PaperTrace AI</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="app.css">
+  <script src="app.js" type="module"></script>
+</head>
+<body>
+  <header>
+    <h1>PaperTrace</h1>
+    <p>Every claim, traced to the paper it came from.</p>
+  </header>
+  <main>
+    <form id="ask">
+      <label for="question">Your research question (English or Portuguese)</label>
+      <textarea id="question" name="text" rows="3" required
+        placeholder="Does intermittent fasting improve memory?"></textarea>
+      <button type="submit">Trace the evidence</button>
+    </form>
+    <p id="status" role="status" aria-live="polite"></p>
+    <section id="plan" hidden><h2>Search plan</h2></section>
+    <section id="papers" hidden><h2>Papers retrieved</h2></section>
+    <section id="synthesis" hidden><h2>Synthesis</h2></section>
+    <section id="verification" hidden><h2>Verification against abstracts</h2></section>
+    <section id="error" role="alert" hidden></section>
+  </main>
+</body>
+</html>
