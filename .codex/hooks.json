@@ -1,0 +1,41 @@
+{
+  "description": "PaperTrace agent guardrails, shared with Claude Code (.claude/hooks/).",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^(Bash|apply_patch|Edit|Write)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.claude/hooks/guard.py\"",
+            "statusMessage": "Checking agent guardrails"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "^(apply_patch|Edit|Write)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$(git rev-parse --show-toplevel)\" && uv run --quiet ruff format --quiet . && uv run --quiet ruff check --fix --quiet . >&2 || exit 2",
+            "statusMessage": "Formatting with ruff"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$(git rev-parse --show-toplevel)/.claude/hooks/stop-checks.sh\"",
+            "timeout": 300,
+            "statusMessage": "Running pytest and mypy"
+          }
+        ]
+      }
+    ]
+  }
+}
