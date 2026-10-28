@@ -96,6 +96,8 @@ Ask before expanding scope; propose extras as v2 in `CONTEXT.md` §11.
 - **PostToolUse**: `ruff format` + `ruff check --fix` on every edited `.py` file.
 - **Stop** `.claude/hooks/stop-checks.sh`: with uncommitted Python changes, the turn cannot end
   while `pytest` or `mypy` fail. Guard behavior is tested in `tests/hooks/`.
+- Codex runs the same scripts via `.codex/hooks.json`; keep both configs in sync when a hook
+  changes, and keep `guard.py` handling both payload shapes (Codex edits arrive as `apply_patch`).
 
 ## Style
 
