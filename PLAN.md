@@ -77,7 +77,7 @@ TDD order:
 2. `SynthesisAgent` with fake `LLMClient`: receives only `list[Paper]`; empty list →
    `insufficient_evidence=True` without calling the LLM.
 3. Prompt rules: cite only listed papers, admit gaps — asserted in tests on the built prompt.
-4. `Pipeline`: coordinates agents and emits `plan`, `papers`, final `synthesis`, `verification`,
+4. `Pipeline`: coordinates agents and emits `plan`, `papers`, draft `synthesis`, `verification`, an optional revised pair,
    `done`; failures emit terminal `error`.
 5. `POST /api/research` → SSE; integration test with fake agents checks event order and payload schema.
 6. Concurrency cap (`LLM_MAX_CONCURRENCY`) shared by all agents.
@@ -100,7 +100,7 @@ answer build up live in a distinctive UI.
 Work:
 1. Visual direction with the `frontend-design` skill (academic/traceability identity, see `CONTEXT.md` §8).
 2. `web/static/` vanilla HTML/CSS/JS served by FastAPI; streaming via `fetch` + `ReadableStream`
-   reader; plan, papers, final synthesis and verification render as events arrive; citations link to DOI/URL.
+   reader; plan, papers, draft synthesis and verification render as events arrive, a revised synthesis replaces the draft; citations link to DOI/URL.
 3. Error and empty states: no results, provider error, missing API key (checked at startup).
 4. `papertrace` console script starts the server.
 5. Full README: architecture diagram, technical decisions, how to run, example run, v1 limitations,
@@ -126,8 +126,8 @@ Extra data sources, full-text verification, persistence, auth, deploy. See `CONT
 
 - [x] Typed claim assessments, findings and evidence references, validated against actual inputs.
 - [x] Verifier through the existing provider port and shared semaphore; optional model override.
-- [x] At most one synthesis revision and re-verification; drafts remain internal.
-- [x] Final-only `synthesis`, `verification`, `done`; technical failures emit `error` instead.
+- [x] At most one synthesis revision and re-verification; a worse or failed revision keeps the draft.
+- [x] Draft `synthesis`/`verification` stream first; an accepted revision follows as a second pair; first-stage technical failures emit `error`.
 - [x] No usable abstracts means deterministic insufficient evidence without LLM calls.
 - [x] Offline flow and provenance tests; coverage at least 85%, mypy and pre-commit.
 - [ ] Live report inspected against real abstracts (opt-in credentials and paid API access).
