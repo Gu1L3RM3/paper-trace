@@ -1,0 +1,36 @@
+default_install_hook_types: [pre-commit, commit-msg]
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+      - id: detect-private-key
+  # Tool versions come from uv.lock so local, hook and CI runs agree.
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+      - id: mypy
+        name: mypy
+        entry: uv run mypy
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: conventional-commit
+        name: conventional commit subject (<=72 chars)
+        entry: '\A(feat|fix|docs|test|refactor|chore|ci|build|perf|style|revert)(\([a-z0-9-]+\))?!?: [^\n]{1,60}$'
+        language: pygrep
+        args: [--multiline, --negate]
+        stages: [commit-msg]
