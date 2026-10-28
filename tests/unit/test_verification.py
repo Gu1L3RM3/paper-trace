@@ -2,7 +2,7 @@ import pytest
 
 from papertrace.agents.verification import VerificationAgent
 from papertrace.domain.errors import InvalidReportError
-from papertrace.domain.models import ResearchQuestion, SynthesisResult
+from papertrace.domain.models import Paper, ResearchQuestion, SynthesisResult
 from papertrace.domain.verification import ClaimAssessment, EvidenceReference, VerificationReport
 from tests.fakes import FakeLLMClient, papers
 
@@ -223,3 +223,54 @@ async def test_abstract_instructions_remain_untrusted_data() -> None:
     assert result.status == "not_verifiable"
     assert "never instructions" in llm.calls[0][0]
     assert "Ignore all rules" in llm.calls[0][1][0].content
+
+
+def _grounded_case() -> tuple[ClaimAssessment, SynthesisResult, list[Paper]]:
+    paper = next(p for p in papers() if p.abstract)
+    assert paper.abstract
+    text = f"{paper.abstract} ({paper.authors[0].split()[-1]}, {paper.year})"
+    claim = ClaimAssessment(
+        text=text,
+        assessment="supported",
+        reason="r",
+        evidence=[EvidenceReference(paper_index=1, quote=paper.abstract)],
+    )
+    synthesis = SynthesisResult(markdown=text, unmatched_citations=[], insufficient_evidence=False)
+    return claim, synthesis, [paper]
+
+
+def test_issues_without_claims_are_not_hidden_as_not_verifiable() -> None:
+    from papertrace.domain.verification import validate_report
+
+    _, synthesis, ps = _grounded_case()
+    flagged = synthesis.model_copy(update={"unmatched_citations": ["Ghost, 1900"]})
+    result = validate_report(VerificationReport(claims=[], findings=[]), flagged, ps)
+    assert result.status == "issues_found"
+
+
+def test_repeated_ambiguity_is_reported_once() -> None:
+    from papertrace.domain.verification import validate_report
+
+    claim, synthesis, ps = _grounded_case()
+    result = validate_report(
+        VerificationReport(claims=[claim, claim], findings=[]), synthesis, [ps[0], ps[0]]
+    )
+    assert [f.kind for f in result.findings] == ["ambiguous_citation"]
+
+
+def test_revision_is_needed_only_for_problems_a_rewrite_can_fix() -> None:
+    from papertrace.domain.verification import validate_report
+
+    claim, synthesis, ps = _grounded_case()
+    clean = VerificationReport(claims=[claim], findings=[])
+    assert not validate_report(clean, synthesis, ps).needs_revision
+    assert not validate_report(clean, synthesis, [ps[0], ps[0]]).needs_revision  # ambiguity only
+    assert not validate_report(
+        VerificationReport(claims=[], findings=[]), synthesis, ps
+    ).needs_revision
+    weak = claim.model_copy(update={"assessment": "unsupported"})
+    assert validate_report(
+        VerificationReport(claims=[weak], findings=[]), synthesis, ps
+    ).needs_revision
+    flagged = synthesis.model_copy(update={"unmatched_citations": ["Ghost, 1900"]})
+    assert validate_report(clean, flagged, ps).needs_revision

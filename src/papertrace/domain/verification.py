@@ -35,6 +35,8 @@ class VerificationResult(VerificationReport):
     status: Literal["no_issues_found", "issues_found", "not_verifiable"]
     reason: str
     revision_count: int = Field(default=0, ge=0, le=1)
+    # Set by validate_report; internal to the pipeline, so it stays out of the SSE payload.
+    needs_revision: bool = Field(default=False, exclude=True)
 
 
 def _normalized(text: str) -> str:
@@ -45,6 +47,7 @@ def validate_report(
     report: VerificationReport, synthesis: SynthesisResult, papers: list[Paper]
 ) -> VerificationResult:
     findings = list(report.findings)
+    ambiguous = False
     for claim in report.claims:
         if not _normalized(claim.text) or _normalized(claim.text) not in _normalized(
             synthesis.markdown
@@ -59,14 +62,15 @@ def validate_report(
                 raise InvalidReportError("Support must come from a cited paper")
         if claim.assessment == "contradicted" and not (claim.evidence or claim.counterevidence):
             raise InvalidReportError("Contradicted claim needs evidence")
-        if any(len(indices) > 1 for indices in candidates):
-            findings.append(
-                VerificationFinding(
-                    kind="ambiguous_citation",
-                    reason="Author and year identify multiple retrieved papers",
-                    evidence=[],
-                )
+        ambiguous = ambiguous or any(len(indices) > 1 for indices in candidates)
+    if ambiguous:
+        findings.append(
+            VerificationFinding(
+                kind="ambiguous_citation",
+                reason="Author and year identify multiple retrieved papers",
+                evidence=[],
             )
+        )
     references = [ref for claim in report.claims for ref in claim.evidence + claim.counterevidence]
     for finding in findings:
         if finding.kind != "ambiguous_citation" and not finding.evidence:
@@ -78,21 +82,25 @@ def validate_report(
         abstract = papers[ref.paper_index - 1].abstract or ""
         if not _normalized(ref.quote) or _normalized(ref.quote) not in _normalized(abstract):
             raise InvalidReportError("Verification quote is absent from the abstract")
-    issues = bool(
-        findings
-        or synthesis.unmatched_citations
+    # Ambiguity alone cannot be fixed by rewriting, so it reports an issue without a revision.
+    needs_revision = bool(
+        synthesis.unmatched_citations
+        or any(f.kind != "ambiguous_citation" for f in findings)
         or any(c.assessment != "supported" or c.counterevidence for c in report.claims)
     )
     status: Literal["no_issues_found", "issues_found", "not_verifiable"] = (
-        "issues_found" if issues else "no_issues_found"
+        "issues_found"
+        if needs_revision or findings
+        else "no_issues_found"
+        if report.claims
+        else "not_verifiable"
     )
-    if not report.claims:
-        status = "not_verifiable"
     return VerificationResult(
         claims=report.claims,
         findings=findings,
         status=status,
-        reason="No assessed factual claims"
-        if not report.claims
-        else "Assessment limited to retrieved abstracts",
+        reason="Assessment limited to retrieved abstracts"
+        if report.claims or status == "issues_found"
+        else "No assessed factual claims",
+        needs_revision=needs_revision,
     )
