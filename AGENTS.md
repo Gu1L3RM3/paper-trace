@@ -111,9 +111,12 @@ persistence, auth, deploy configuration, frontend frameworks or build steps. Pro
 - The `commit-msg` hook rejects messages that do not follow the format. Do not bypass hooks
   (`--no-verify`).
 - Never commit `.env`, keys, `.project-status`, or generated files.
-- Claude Code enforces these rules with hooks (`.claude/settings.json`, `.claude/hooks/`): no hook
-  bypass, no force or `main` pushes, no `.env` access, and tests + mypy must pass before a turn
-  ends. Other agents must follow the same rules themselves; git hooks and CI apply to everyone.
+- Hooks enforce these rules for Claude Code (`.claude/settings.json`) and Codex
+  (`.codex/hooks.json`), both running the scripts in `.claude/hooks/`: no hook bypass, no force
+  or `main` pushes, no `.env` access (including Codex `apply_patch`), ruff after edits, and
+  pytest + mypy must pass before a turn ends. If a hook blocks you, change approach or ask the
+  user; never work around it. Codex: trust the hooks once with `/hooks`. Other agents follow
+  the rules manually; git hooks and CI apply to everyone.
 
 ## Code style
 
