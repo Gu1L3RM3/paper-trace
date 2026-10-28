@@ -3,6 +3,7 @@ import logging
 
 from papertrace.domain.errors import InvalidReportError
 from papertrace.domain.models import Paper, ResearchQuestion, SynthesisResult
+from papertrace.domain.papers import prompt_view
 from papertrace.domain.verification import VerificationReport, VerificationResult, validate_report
 from papertrace.llm.base import LLMClient, Message, ToolSpec
 
@@ -40,8 +41,8 @@ class VerificationAgent:
         payload = json.dumps(
             {
                 "question": question.text,
-                "synthesis": synthesis.model_dump(),
-                "papers": [dict(index=i, **p.model_dump()) for i, p in enumerate(papers, 1)],
+                "synthesis": synthesis.markdown,
+                "papers": [prompt_view(i, p) for i, p in enumerate(papers, 1)],
             },
             ensure_ascii=False,
         )
