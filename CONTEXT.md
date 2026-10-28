@@ -301,3 +301,12 @@ One failed source does not discard the other's papers: `failed_queries` names bo
 and query. If no papers arrive and any searches failed, processing ends with an error.
 If all searches succeed but find no usable evidence, the existing insufficient-evidence
 response applies. Source adapters and the combined researcher share the existing typed contracts.
+
+
+### Frontend identity
+The interface uses a light editorial palette (navy ink, green accents), system serif headings,
+and a locally stored transparent document/citation-trail mark. No external fonts or frontend
+build dependencies. Question examples populate and focus the form without starting a search.
+The four-step trace reflects SSE progress; results separate synthesis/assessment from searches
+and references on desktop and stack on narrow screens. Partial failures, error states, unmatched
+citations and one accepted revision remain visible. Reduced-motion preferences are respected.

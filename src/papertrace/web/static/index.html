@@ -3,29 +3,84 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PaperTrace AI</title>
-  <link rel="icon" href="data:,">
+  <meta name="theme-color" content="#152d3b">
+  <meta name="description" content="Explore research questions with real academic papers, traceable citations and abstract-based evidence assessment.">
+  <title>PaperTrace — Follow the evidence</title>
+  <link rel="icon" href="assets/papertrace-mark.png" type="image/png">
   <link rel="stylesheet" href="app.css">
   <script src="app.js" type="module"></script>
 </head>
-<body>
-  <header>
-    <h1>PaperTrace</h1>
-    <p>Every claim, traced to the paper it came from.</p>
+<body data-research-state="idle">
+  <a class="skip-link" href="#question">Skip to research question</a>
+  <header class="masthead">
+    <a class="brand" href="./" aria-label="PaperTrace home">
+      <img src="assets/papertrace-mark.png" alt="" width="44" height="44">
+      <span>PaperTrace<span class="brand-ai">AI</span></span>
+    </a>
+    <div class="masthead-right"><span class="edition">A research workspace</span><a href="#method">The method <span aria-hidden="true">↗</span></a></div>
   </header>
   <main>
-    <form id="ask">
-      <label for="question">Your research question (English or Portuguese)</label>
-      <textarea id="question" name="text" rows="3" required
-        placeholder="Does intermittent fasting improve memory?"></textarea>
-      <button type="submit">Trace the evidence</button>
-    </form>
-    <p id="status" role="status" aria-live="polite"></p>
-    <section id="plan" hidden><h2>Search plan</h2></section>
-    <section id="papers" hidden><h2>Papers retrieved</h2></section>
-    <section id="synthesis" hidden><h2>Synthesis</h2></section>
-    <section id="verification" hidden><h2>Verification against abstracts</h2></section>
+    <div class="workspace">
+      <aside class="margin-note" aria-label="Research principles">
+        <div class="margin-kicker"><span class="trace-dot" aria-hidden="true"></span> EVIDENCE, CONNECTED</div>
+        <p class="margin-title">A little less searching.<br>A lot more understanding.</p>
+        <div class="margin-rule"></div>
+        <p>Real papers.<br>Traceable citations.<br>Room for uncertainty.</p>
+        <span class="margin-index">RESEARCH / 01</span>
+      </aside>
+      <div class="research-desk">
+        <section class="intro" aria-labelledby="intro-title">
+          <p class="eyebrow">FROM QUESTION TO UNDERSTANDING</p>
+          <h1 id="intro-title">Ask a question.<br>Follow the <em>evidence.</em></h1>
+          <p class="intro-copy">Explore what the research says, with a synthesis grounded in real academic papers and citations you can follow.</p>
+        </section>
+        <form id="ask" class="question-sheet">
+          <label for="question">What would you like to understand?</label>
+          <textarea id="question" name="text" rows="3" required aria-describedby="question-hint"
+            placeholder="Does intermittent fasting improve memory?"></textarea>
+          <div class="question-footer">
+            <p id="question-hint">Ask in English or Portuguese.</p>
+            <button type="submit"><span>Trace the evidence</span><span aria-hidden="true">↗</span></button>
+          </div>
+        </form>
+        <div class="examples">
+          <span class="eyebrow">A PLACE TO START</span>
+          <button type="button" data-question="Does intermittent fasting improve memory?">Fasting &amp; memory <span aria-hidden="true">↗</span><span class="sr-only"> — Does intermittent fasting improve memory?</span></button>
+          <button type="button" data-question="How does reinforcement learning improve robotic control?">Learning &amp; robotics <span aria-hidden="true">↗</span></button>
+          <button type="button" data-question="What are the effects of urban green spaces on mental health?">Cities &amp; well-being <span aria-hidden="true">↗</span></button>
+        </div>
+        <div class="source-line"><span class="source-label">SEARCHING THE LITERATURE WITH</span><span>OpenAlex</span><span class="source-plus" aria-hidden="true">+</span><span>Semantic Scholar</span></div>
+        <section class="research-trace" aria-label="Research progress">
+          <ol class="steps">
+            <li data-stage="plan"><span class="step-number">01</span><div><span class="step-label">Plan</span><span class="step-state">Your question</span></div></li>
+            <li data-stage="papers"><span class="step-number">02</span><div><span class="step-label">Discover</span><span class="step-state">Real papers</span></div></li>
+            <li data-stage="synthesis"><span class="step-number">03</span><div><span class="step-label">Synthesize</span><span class="step-state">Connected ideas</span></div></li>
+            <li data-stage="verification"><span class="step-number">04</span><div><span class="step-label">Assess</span><span class="step-state">Abstract support</span></div></li>
+          </ol>
+          <p id="status" role="status" aria-live="polite">A clear path from your question to the source.</p>
+        </section>
+      </div>
+    </div>
     <section id="error" role="alert" hidden></section>
+    <div id="results" class="results" hidden>
+      <div class="results-article">
+        <section id="synthesis" class="result-section" hidden><h2><span class="section-index">03 /</span> Research synthesis</h2></section>
+        <section id="verification" class="result-section" hidden><h2><span class="section-index">04 /</span> Evidence assessment</h2></section>
+      </div>
+      <aside class="results-evidence" aria-label="Searches and references">
+        <section id="plan" class="result-section" hidden><h2><span class="section-index">01 /</span> Search plan</h2></section>
+        <section id="papers" class="result-section" hidden><h2><span class="section-index">02 /</span> Papers retrieved</h2></section>
+      </aside>
+    </div>
+    <section id="method" class="method" aria-labelledby="method-title">
+      <div class="method-heading"><p class="eyebrow">THE METHOD</p><h2 id="method-title">Understanding, with a paper trail.</h2><p>Built for curiosity.<br>Designed to be questioned.</p></div>
+      <div class="method-notes">
+        <div><span>01</span><div><h3>Start with real literature</h3><p>Your question becomes focused searches across OpenAlex and Semantic Scholar.</p></div></div>
+        <div><span>02</span><div><h3>Keep the source in sight</h3><p>A research synthesis connects ideas and links citations back to the retrieved papers.</p></div></div>
+        <div><span>03</span><div><h3>Make uncertainty visible</h3><p>Claims are assessed against abstracts. Evidence gaps stay visible; an assessment is not a guarantee of truth.</p></div></div>
+      </div>
+    </section>
   </main>
+  <footer class="site-footer"><span>PaperTrace <span class="footer-tagline">/ Every claim, a paper trail.</span></span><span>Read the sources. Keep asking questions.</span></footer>
 </body>
 </html>
