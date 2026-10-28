@@ -77,21 +77,37 @@ class Pipeline:
                 # Nothing came back and part of the search broke: that is not "no evidence".
                 raise SourceError(f"Search failed for: {', '.join(result.failed_queries)}")
             synthesis = await self._synthesizer.synthesize(question, result.papers)
-            verification = await self._verifier.verify(question, synthesis, result.papers)
-            if verification.needs_revision:
-                revised = await self._synthesizer.revise(
-                    question, result.papers, synthesis, verification
-                )
-                # A revision that cites more unlisted papers is worse than the draft it fixes.
-                if len(revised.unmatched_citations) <= len(synthesis.unmatched_citations):
-                    synthesis = revised
-                    verification = await self._verifier.verify(question, synthesis, result.papers)
-                    verification = verification.model_copy(update={"revision_count": 1})
             yield StageEvent("synthesis", synthesis)
+            verification = await self._verifier.verify(question, synthesis, result.papers)
             yield StageEvent("verification", verification)
+            if verification.needs_revision:
+                revision = await self._revise(question, result.papers, synthesis, verification)
+                if revision:
+                    yield StageEvent("synthesis", revision[0])
+                    yield StageEvent("verification", revision[1])
             yield StageEvent("done")
         except PaperTraceError as exc:
             yield StageEvent("error", ErrorPayload(message=str(exc)))
         except Exception:
             logger.exception("Unexpected pipeline failure")
             yield StageEvent("error", ErrorPayload(message="Unexpected internal error"))
+
+    async def _revise(
+        self,
+        question: ResearchQuestion,
+        papers: list[Paper],
+        draft: SynthesisResult,
+        verification: VerificationResult,
+    ) -> tuple[SynthesisResult, VerificationResult] | None:
+        """One bounded revision; the draft is already streamed, so any failure just keeps it."""
+        try:
+            revised = await self._synthesizer.revise(question, papers, draft, verification)
+            # A revision that cites more unlisted papers is worse than the draft it fixes.
+            if len(revised.unmatched_citations) > len(draft.unmatched_citations):
+                return None
+            revised = revised.model_copy(update={"revision": True})
+            checked = await self._verifier.verify(question, revised, papers)
+        except PaperTraceError:
+            logger.warning("Revision failed; keeping the draft", exc_info=True)
+            return None
+        return revised, checked.model_copy(update={"revision_count": 1})
