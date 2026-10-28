@@ -49,7 +49,7 @@ papers, and switching LLM provider is a `.env` change.
 TDD order:
 1. Domain models and validation (`SearchPlan` rejects <2 or >4 queries; `Paper` normalizes DOI).
 2. Pure functions: OpenAlex `abstract_inverted_index` → text; dedup by DOI, fallback normalized title.
-3. `LLMClient` port + shared contract tests → generic `HttpLLMClient` → factory.
+3. `LLMClient` port + shared contract tests → `OpenAIClient` (openai SDK) → builder.
 4. `PaperSource` port → `OpenAlexSource` (httpx async, `respx` with recorded real responses).
 5. `OrchestratorAgent` with a fake `LLMClient`: question → `SearchPlan` through a forced tool call.
 6. `ResearchAgent` with a fake `PaperSource`: concurrency proven by a timing test (N queries of
@@ -57,7 +57,7 @@ TDD order:
 7. CLI `python -m papertrace.cli "<question>"` (thin wiring, no logic).
 
 SOLID focus: **D** (agents get ports by constructor), **L** (contract tests per port),
-**O** (adding a provider touches only `llm/` adapter + factory).
+**O** (adding a provider touches only `llm/`).
 
 **Done when:**
 - [ ] CLI prints real papers against a real chat/completions endpoint, changing only `.env`.

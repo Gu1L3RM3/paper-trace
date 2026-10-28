@@ -9,7 +9,7 @@ from papertrace.agents.orchestrator import OrchestratorAgent
 from papertrace.agents.research import ResearchAgent
 from papertrace.agents.synthesis import SynthesisAgent
 from papertrace.agents.verification import VerificationAgent
-from papertrace.llm.factory import build_llm_client
+from papertrace.llm.openai_client import build_llm_client
 from papertrace.pipeline import Pipeline
 from papertrace.settings import Settings
 from papertrace.sources.openalex import OpenAlexSource

@@ -8,7 +8,7 @@ from papertrace.agents.orchestrator import OrchestratorAgent
 from papertrace.agents.research import ResearchAgent
 from papertrace.domain.errors import PaperTraceError
 from papertrace.domain.models import Paper, ResearchQuestion
-from papertrace.llm.factory import build_llm_client
+from papertrace.llm.openai_client import build_llm_client
 from papertrace.settings import Settings
 from papertrace.sources.openalex import OpenAlexSource
 
