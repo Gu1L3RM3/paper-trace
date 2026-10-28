@@ -30,3 +30,12 @@ def test_dedup_falls_back_to_normalized_title_without_doi() -> None:
 def test_dedup_does_not_merge_doi_less_with_different_title() -> None:
     papers = [_paper("One"), _paper("Two")]
     assert dedup_papers(papers) == papers
+
+
+def test_dedup_keeps_distinct_non_latin_titles() -> None:
+    papers = [_paper("间歇性禁食与认知"), _paper("Прерывистое голодание"), _paper("الصيام المتقطع")]
+    assert dedup_papers(papers) == papers
+
+
+def test_dedup_merges_titles_differing_only_by_accents_and_case() -> None:
+    assert len(dedup_papers([_paper("Étude du jeûne"), _paper("ETUDE DU JEUNE")])) == 1

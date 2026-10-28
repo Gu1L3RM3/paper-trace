@@ -1,8 +1,6 @@
-import re
+import unicodedata
 
 from papertrace.domain.models import Paper
-
-_NON_ALNUM = re.compile(r"[^a-z0-9]+")
 
 
 def abstract_from_inverted_index(index: dict[str, list[int]] | None) -> str | None:
@@ -13,8 +11,14 @@ def abstract_from_inverted_index(index: dict[str, list[int]] | None) -> str | No
     return " ".join(words[pos] for pos in sorted(words))
 
 
+def _normalize_title(title: str) -> str:
+    """Case, accent and punctuation insensitive, but keeps non-Latin scripts distinct."""
+    decomposed = unicodedata.normalize("NFKD", title.casefold())
+    return "".join(c for c in decomposed if c.isalnum())
+
+
 def _key(paper: Paper) -> str:
-    return paper.doi or _NON_ALNUM.sub("", paper.title.lower())
+    return paper.doi or _normalize_title(paper.title) or paper.title
 
 
 def dedup_papers(papers: list[Paper]) -> list[Paper]:

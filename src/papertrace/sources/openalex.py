@@ -1,6 +1,7 @@
 from typing import Any
 
 import httpx
+from pydantic import ValidationError
 
 from papertrace.domain.errors import SourceError
 from papertrace.domain.models import Paper
@@ -36,15 +37,20 @@ class OpenAlexSource:
 
 
 def _to_paper(work: dict[str, Any]) -> Paper | None:
+    """Map one record; a malformed one is skipped so it cannot sink the other results."""
     title = work.get("title")
     if not title:
         return None
     location = work.get("primary_location") or {}
-    return Paper(
-        title=title,
-        authors=[a["author"]["display_name"] for a in work.get("authorships", [])],
-        year=work.get("publication_year"),
-        doi=work.get("doi"),
-        abstract=abstract_from_inverted_index(work.get("abstract_inverted_index")),
-        url=location.get("landing_page_url") or work.get("doi") or work["id"],
-    )
+    names = ((a.get("author") or {}).get("display_name") for a in work.get("authorships") or [])
+    try:
+        return Paper(
+            title=title,
+            authors=[name for name in names if name],
+            year=work.get("publication_year"),
+            doi=work.get("doi"),
+            abstract=abstract_from_inverted_index(work.get("abstract_inverted_index")),
+            url=location.get("landing_page_url") or work.get("doi") or work["id"],
+        )
+    except (ValidationError, KeyError, AttributeError):
+        return None

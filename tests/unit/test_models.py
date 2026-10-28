@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from papertrace.domain.models import Paper, SearchPlan, SearchQuery
+from papertrace.domain.models import Paper, ResearchQuestion, SearchPlan, SearchQuery
 
 
 def _queries(n: int) -> list[SearchQuery]:
@@ -36,3 +36,15 @@ def test_paper_normalizes_doi(raw: str) -> None:
 def test_paper_keeps_missing_doi_none() -> None:
     paper = Paper(title="t", authors=[], year=None, doi=None, abstract=None, url="https://x")
     assert paper.doi is None
+
+
+@pytest.mark.parametrize("blank", ["", "   ", "\n"])
+def test_blank_question_and_query_are_rejected(blank: str) -> None:
+    with pytest.raises(ValidationError):
+        ResearchQuestion(text=blank)
+    with pytest.raises(ValidationError):
+        SearchQuery(query=blank, angle="a")
+
+
+def test_query_is_stripped() -> None:
+    assert SearchQuery(query="  fasting ", angle="a").query == "fasting"
