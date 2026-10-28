@@ -42,3 +42,33 @@ def test_missing_configuration_prints_friendly_error(
 
     assert main() == 1
     assert "LLM_MODEL" in capsys.readouterr().err.upper()
+
+
+async def test_cli_searches_both_sources(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import asyncio
+    import json
+
+    import respx
+
+    from papertrace import cli
+    from papertrace.domain.models import SearchPlan, SearchQuery
+    from papertrace.settings import Settings
+    from tests.fakes import FakeLLMClient
+
+    plan = SearchPlan(queries=[SearchQuery(query=q, angle=q) for q in ("a", "b")])
+    monkeypatch.setattr(cli, "build_llm_client", lambda *args, **kwargs: FakeLLMClient(plan))
+    payload = json.loads(
+        await asyncio.to_thread(Path("tests/fixtures/semantic_scholar.json").read_text)
+    )
+    with respx.mock:
+        oa = respx.get("https://api.openalex.org/works").respond(200, json={"results": []})
+        ss = respx.get("https://api.semanticscholar.org/graph/v1/paper/search").respond(
+            200, json=payload
+        )
+        result = await cli._run(
+            "control", Settings(_env_file=None, llm_api_key="unused", llm_model="fake")
+        )
+    assert oa.call_count == 2 and ss.call_count == 2
+    assert payload["data"][0]["title"] in result

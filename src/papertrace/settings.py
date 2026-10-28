@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     verification_model: str | None = None
     llm_max_concurrency: int = 4
     openalex_mailto: str | None = None
+    semantic_scholar_api_key: SecretStr | None = None
 
     def model_for(self, agent: Literal["orchestrator", "synthesis", "verification"]) -> str:
         if agent == "verification":

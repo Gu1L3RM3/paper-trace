@@ -105,3 +105,22 @@ def test_blank_question_is_rejected(client: TestClient) -> None:
     response = client.post("/api/research", json={"text": "  "})
 
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize("has_papers", [True, False])
+def test_combined_source_failure_remains_visible(client: TestClient, has_papers: bool) -> None:
+    from papertrace.agents.multi_source import MultiSourceResearcher
+    from tests.fakes import FakePaperSource, papers
+
+    researcher = MultiSourceResearcher(
+        {
+            "OpenAlex": FakePaperSource({"a": papers() if has_papers else [], "b": []}),
+            "Semantic Scholar": FakePaperSource({"a": SourceError("rate limit"), "b": []}),
+        }
+    )
+    app.dependency_overrides[get_pipeline] = lambda: Pipeline(
+        _Planner(), researcher, _Synthesizer(), FakeVerifier()
+    )
+    events = _stream(client)
+    assert events[1][1]["failed_queries"] == ["Semantic Scholar: a"]
+    assert events[-1][0] == ("done" if has_papers else "error")

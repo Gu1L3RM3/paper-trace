@@ -24,7 +24,12 @@ def _key(paper: Paper) -> str:
 def dedup_papers(papers: list[Paper]) -> list[Paper]:
     seen: dict[str, Paper] = {}
     for paper in papers:
-        seen.setdefault(_key(paper), paper)
+        key = _key(paper)
+        previous = seen.get(key)
+        if previous is None or (
+            not (previous.abstract or "").strip() and (paper.abstract or "").strip()
+        ):
+            seen[key] = paper
     return list(seen.values())
 
 

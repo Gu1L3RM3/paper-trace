@@ -1,0 +1,56 @@
+{
+  "total": 7388,
+  "data": [
+    {
+      "paperId": "001a1e07aea568cfb6975820d5faf057c83d2a75",
+      "externalIds": {
+        "MAG": "2041994506",
+        "DOI": "10.1016/J.AFJEM.2013.06.002",
+        "CorpusId": 72075104
+      },
+      "url": "https://www.semanticscholar.org/paper/001a1e07aea568cfb6975820d5faf057c83d2a75",
+      "title": "Junk food and the rise of acute coronary syndrome in Africa",
+      "year": 2013,
+      "openAccessPdf": {
+        "url": "https://www.sciencedirect.com/science/article/pii/S2211419X13000773/pdf",
+        "status": "GOLD",
+        "license": "CCBYNCND",
+        "disclaimer": "Notice: Paper or abstract available at https://api.unpaywall.org/v2/10.1016/J.AFJEM.2013.06.002?email=<INSERT_YOUR_EMAIL> or https://doi.org/10.1016/J.AFJEM.2013.06.002, which is subject to the license by the author or copyright owner provided with this content. Please go to the source to verify the license and copyright information for your use."
+      },
+      "authors": [
+        {
+          "authorId": "31759543",
+          "name": "S. Bruijns"
+        }
+      ],
+      "abstract": "I know as well as the next person that junk food is aptly named for the low quality nutrition it provides and also that consuming it will almost certainly turn your internal organs into, well, junk. Personally, I tend to eat all sorts of rubbish when I study, especially when I am home alone. Being nearly forty, male and employed in a high stress occupation I understand that I have an above average risk of developing acute coronary syndrome (ACS) in my lifetime. Should I choose to keep up my nasty study-snack habit I am extremely likely to aid a cardiologist somewhere in the near future to pay off their luxury yacht, car or house. Employed in a profession looked up to by society for being a squeaky clean representative for everything healthy and wholesome, it beggars even my own belief that I would persist in this bad eating habit. Funnily enough this is not just my vice. In a society where you can make a purchase of almost anything that catches your fancy at pretty much any time of the day, or can send a message to another person in the blink of an eye, an instant-gratification-culture has become the new norm. Why should I grow my own vegetables if I can buy them fresh from the shop? Or better yet, why buy fresh vegetables if I can get them already cooked (and greased) from the local take-away down the road? With more people than ever living in cities, longer and longer working hours becoming the norm and the rock-bottom prices of junk food, it is little wonder that in Africa non-communicable diseases (which include ACS) are touted to be a bigger killer than HIV and TB combined within the next few decades. 1\u20133 I reluctantly admit that the answer to this rising problem is not solely investing in acute care- that would mean addressing the problem backwards. In order to address it head on, governments need to realise that simple, cost-effective prevention strategies are a lot less expensive than paying for cardiac catheter laboratories, coronary rehabilitation and social allowance for working age individuals who become cardiac cripples following an acute cardiac event. Sadly for Africa it will take a while for this to happen; and so acute care workers will continue to anti-coagulate, thrombolyse, stent and resuscitate as best we can. With this in mind I hope you will find Hamilton and colleagues\u2019 narrative review on the management of ACS with its specific focus on resource-poor settings as compelling as I did. I would also like to draw attention to the letter from the review\u2019s authors which provides further updates which were not available when the original review went into production. Not to get you all bogged down in coronary complexities, you will also find further original research papers on paediatric burns from Morocco and the development of a sepsis care algorithm from Botswana. Then there is part 1 of a 2-part series on emergencies related to HIV infection. Part 2 will be published in the December issue, which if you are attending EMSSA 2013 you would already be able to leaf through a month earlier. I hope you enjoy this issue as much as I did compiling it."
+    },
+    {
+      "paperId": "004a41c3c4ab54d70b6a91155645b07a38e83da4",
+      "externalIds": {
+        "DOI": "10.32347/2412-9933.2021.46.63-69",
+        "CorpusId": 244876119
+      },
+      "url": "https://www.semanticscholar.org/paper/004a41c3c4ab54d70b6a91155645b07a38e83da4",
+      "title": "PROSPECTS FOR THE IMPLEMENTATION OF BIM-TECHNOLOGIES IN THE DOMESTIC CONSTRUCTION INDUSTRY",
+      "year": 2021,
+      "openAccessPdf": {
+        "url": "http://mdcs.knuba.edu.ua/article/download/244932/242709",
+        "status": "GOLD",
+        "license": "CCBYNCND",
+        "disclaimer": "Notice: Paper or abstract available at https://api.unpaywall.org/v2/10.32347/2412-9933.2021.46.63-69?email=<INSERT_YOUR_EMAIL> or https://doi.org/10.32347/2412-9933.2021.46.63-69, which is subject to the license by the author or copyright owner provided with this content. Please go to the source to verify the license and copyright information for your use."
+      },
+      "authors": [
+        {
+          "authorId": "1738633240",
+          "name": "K. Kyivska"
+        },
+        {
+          "authorId": "2122519120",
+          "name": "Yuliia Luzina"
+        }
+      ],
+      "abstract": "The construction industry in Ukraine is not experiencing the best of times. Two years ago, the development of this industry, although not fast enough, but grew up. Today, analysts note a steady and significant decline in capacity. The epidemiological situation in the world, insufficient technical and digital support, outdated means and methods of construction and design - many factors that together delay the development of perhaps the most important industry for the state and regional economy, because construction is an industry with great potential vital activity of the whole country as a whole. To increase the level of domestic construction, as well as improve the functioning of the construction industry of Ukraine, it is necessary to pay attention to the need for large-scale implementation of advanced information modeling of buildings \u2013 BIM \u2013 a resource for presenting all characteristics of the object (physical and functional) in digital format. Thanks to its technology, this modeling ensures that all changes made to the process are taken into account, and accordingly adjusts all related criteria to obtain the most accurate and relevant result that would correspond to the real object. In addition, VIM technology allows you to keep all production data available to employees, which will ensure interaction at all stages of work, without delays and data loss. VIM will help to identify errors and inaccuracies in construction in advance, providing protection against additional costs due to erroneous construction models. With this technology, professionals in various fields of construction, design and architecture will be able to more effectively design, plan, build and operate buildings and infrastructure. According to the authors, the introduction of VIM technologies is the most important step to improve the quality and increase the level of domestic construction to modern European standards."
+    }
+  ]
+}

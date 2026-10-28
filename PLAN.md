@@ -134,3 +134,10 @@ Extra data sources, full-text verification, persistence, auth, deploy. See `CONT
 
 Frontend remains a separate Stage 3 deliverable. A successful report is an LLM assessment of
 abstract support, not a scientific guarantee. No sources, persistence or full-text fetching added.
+
+
+## Approved extension — Semantic Scholar
+- [x] Additional PaperSource adapter; optional API key and one-request-per-second pacing.
+- [x] Combined API/CLI retrieval with deduplication and visible partial failures.
+- [x] Offline adapter, contract and combination tests with recorded real papers.
+- [ ] Live authenticated search confirmed (anonymous search may return HTTP 429).

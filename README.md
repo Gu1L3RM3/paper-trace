@@ -1,7 +1,7 @@
 # PaperTrace AI
 
 Multi-agent research assistant: ask a question, get a synthesis that cites only the academic papers
-it actually retrieved from OpenAlex.
+it actually retrieved from OpenAlex and Semantic Scholar.
 
 See [`PLAN.md`](PLAN.md) for the staged roadmap and [`CONTEXT.md`](CONTEXT.md) for the full
 project context.
@@ -119,3 +119,18 @@ consume the new `verification` event and wait for `done` before treating the run
 
 Live verification tests are opt-in (`uv run pytest -m live`). Inspect the emitted report against
 its abstracts manually; fake-based tests establish flow and validation, not scientific accuracy.
+
+
+### Approved extension — Semantic Scholar
+API and retrieval CLI search OpenAlex and Semantic Scholar together. Each source returns
+up to 15 papers per query. Results are deduplicated by DOI, or normalized title without a DOI;
+a duplicate with a usable abstract replaces one without an abstract.
+Verification remains abstract-only; there is no independent cross-source verification.
+
+Set optional `SEMANTIC_SCHOLAR_API_KEY` for authenticated access. Without a key,
+Semantic Scholar is still queried, but the shared anonymous pool can return HTTP 429.
+Calls are spaced at least one second apart per application instance, with no automatic retry.
+One failed source does not discard the other's papers: `failed_queries` names both source
+and query. If no papers arrive and any searches failed, processing ends with an error.
+If all searches succeed but find no usable evidence, the existing insufficient-evidence
+response applies. Source adapters and the combined researcher share the existing typed contracts.

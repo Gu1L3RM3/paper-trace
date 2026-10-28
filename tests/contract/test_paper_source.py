@@ -11,6 +11,7 @@ import respx
 from papertrace.domain.errors import SourceError
 from papertrace.sources.base import PaperSource
 from papertrace.sources.openalex import OpenAlexSource
+from papertrace.sources.semantic_scholar import SemanticScholarSource
 
 FIXTURES = Path(__file__).parent.parent / "fixtures"
 OPENALEX_URL = "https://api.openalex.org/works"
@@ -20,7 +21,17 @@ def _openalex(client: httpx.AsyncClient) -> PaperSource:
     return OpenAlexSource(client=client, mailto="me@example.com")
 
 
-@pytest.fixture(params=[(_openalex, OPENALEX_URL, "openalex_works.json")], ids=["openalex"])
+@pytest.fixture(
+    params=[
+        (_openalex, OPENALEX_URL, "openalex_works.json"),
+        (
+            lambda client: SemanticScholarSource(client=client),
+            "https://api.semanticscholar.org/graph/v1/paper/search",
+            "semantic_scholar.json",
+        ),
+    ],
+    ids=["openalex", "semantic-scholar"],
+)
 def source_case(
     request: pytest.FixtureRequest,
 ) -> tuple[Callable[[httpx.AsyncClient], PaperSource], str, dict[str, object]]:
