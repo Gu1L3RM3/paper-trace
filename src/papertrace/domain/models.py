@@ -1,17 +1,19 @@
 import re
 from typing import Annotated
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, StringConstraints, field_validator
 
 _DOI_PREFIX = re.compile(r"^(?:https?://(?:dx\.)?doi\.org/|doi:)", re.IGNORECASE)
 
+_Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
 
 class ResearchQuestion(BaseModel):
-    text: str = Field(min_length=1)
+    text: _Text
 
 
 class SearchQuery(BaseModel):
-    query: str
+    query: _Text
     angle: str
 
 

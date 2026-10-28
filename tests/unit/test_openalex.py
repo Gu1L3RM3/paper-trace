@@ -38,3 +38,28 @@ async def test_skips_works_without_title() -> None:
         )
         async with httpx.AsyncClient() as client:
             assert await OpenAlexSource(client=client).search("x") == []
+
+
+async def test_malformed_records_are_skipped_not_fatal() -> None:
+    good = WORKS["results"][0]
+    payload = {
+        "results": [
+            {"id": "W1", "title": "No authorships", "authorships": None},
+            {"id": "W2", "title": "Null author name", "authorships": [{"author": {}}]},
+            {"id": "W3", "title": "Bad doi", "doi": 123},
+            {"title": "No id and no links"},
+            good,
+        ]
+    }
+    with respx.mock:
+        respx.get("https://api.openalex.org/works").mock(
+            return_value=httpx.Response(200, json=payload)
+        )
+        async with httpx.AsyncClient() as client:
+            papers = await OpenAlexSource(client=client).search("x")
+
+    assert [p.title for p in papers][:2] == ["No authorships", "Null author name"]
+    assert papers[0].authors == [] and papers[1].authors == []
+    assert papers[-1].doi == "10.1007/s40279-015-0408-6"
+    assert "Bad doi" not in [p.title for p in papers]
+    assert "No id and no links" not in [p.title for p in papers]
