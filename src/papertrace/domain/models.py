@@ -1,0 +1,35 @@
+import re
+from typing import Annotated
+
+from pydantic import BaseModel, Field, field_validator
+
+_DOI_PREFIX = re.compile(r"^(?:https?://(?:dx\.)?doi\.org/|doi:)", re.IGNORECASE)
+
+
+class ResearchQuestion(BaseModel):
+    text: str = Field(min_length=1)
+
+
+class SearchQuery(BaseModel):
+    query: str
+    angle: str
+
+
+class SearchPlan(BaseModel):
+    queries: Annotated[list[SearchQuery], Field(min_length=2, max_length=4)]
+
+
+class Paper(BaseModel):
+    title: str
+    authors: list[str]
+    year: int | None
+    doi: str | None
+    abstract: str | None
+    url: str
+
+    @field_validator("doi")
+    @classmethod
+    def _normalize_doi(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return _DOI_PREFIX.sub("", value.strip()).lower()
