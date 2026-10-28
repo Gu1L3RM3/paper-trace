@@ -1,4 +1,4 @@
-from papertrace.domain.citations import find_unmatched_citations
+from papertrace.domain.citations import citation_candidates, find_unmatched_citations
 from papertrace.domain.models import Paper
 
 
@@ -71,3 +71,9 @@ def test_suffix_and_last_first_author_names() -> None:
     papers = [_paper(["Martin Luther King Jr."], 2020), _paper(["Doe, John"], 2019)]
 
     assert find_unmatched_citations("(King, 2020) (Doe, 2019)", papers) == []
+
+
+def test_candidates_use_the_surname_of_multi_word_cited_names() -> None:
+    papers = [_paper(["Jan van der Berg"], 2020)]
+
+    assert citation_candidates("(Van der Berg, 2020)", papers) == [[1]]

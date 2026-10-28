@@ -34,6 +34,10 @@ def _first_author(authors: str) -> str:
     return next((p for p in _AUTHOR_SEPARATOR.split(cited) if p), "")
 
 
+def _cited_key(authors: str) -> str:
+    return _fold(surname(_first_author(authors)))
+
+
 def _mentions(text: str) -> list[tuple[str, str, str]]:
     """(as written, authors, year token) for every parenthetical and narrative citation."""
     found: list[tuple[str, str, str]] = []
@@ -60,7 +64,7 @@ def find_unmatched_citations(text: str, papers: list[Paper]) -> list[str]:
     known = {(_fold(surname(p.authors[0])), p.year) for p in papers if p.authors}
     unmatched: dict[str, None] = {}
     for written, authors, year in _mentions(text):
-        if (_fold(surname(_first_author(authors))), _year(year)) not in known:
+        if (_cited_key(authors), _year(year)) not in known:
             unmatched[written] = None
     return list(unmatched)
 
@@ -72,7 +76,7 @@ def citation_candidates(text: str, papers: list[Paper]) -> list[list[int]]:
             i
             for i, paper in enumerate(papers, 1)
             if paper.authors
-            and _fold(surname(paper.authors[0])) == _fold(_first_author(authors))
+            and _fold(surname(paper.authors[0])) == _cited_key(authors)
             and paper.year == _year(year)
         ]
         for _, authors, year in _mentions(text)
