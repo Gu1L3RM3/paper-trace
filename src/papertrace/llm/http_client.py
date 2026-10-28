@@ -10,6 +10,9 @@ from papertrace.llm.base import Message, ToolSpec
 from papertrace.settings import Settings
 
 _TIMEOUT = 120.0  # local models can be slow
+_ATTEMPTS = 3
+_BACKOFF = 1.0  # seconds, doubled after each failed attempt
+_RETRYABLE_STATUS = {429, 500, 502, 503, 504}
 
 
 class HttpLLMClient:
@@ -54,8 +57,12 @@ class HttpLLMClient:
         for call in message.get("tool_calls") or []:
             function = call.get("function") or {}
             if function.get("name") == tool.name:
+                arguments = function.get("arguments") or ""
                 try:
-                    return tool.output.model_validate_json(function.get("arguments") or "")
+                    # Some local servers return the arguments as an object, not a JSON string.
+                    if isinstance(arguments, dict):
+                        return tool.output.model_validate(arguments)
+                    return tool.output.model_validate_json(arguments)
                 except ValidationError as exc:
                     raise LLMError(f"Invalid arguments for tool {tool.name}: {exc}") from exc
         raise LLMError(f"Model did not call tool {tool.name}")
@@ -74,15 +81,27 @@ class HttpLLMClient:
             **extra,
         }
         try:
-            async with self._semaphore or nullcontext():
-                response = await self._client.post(self._url, json=body, headers=self._headers)
-            response.raise_for_status()
-            message = response.json()["choices"][0]["message"]
+            message = (await self._post(body)).json()["choices"][0]["message"]
         except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError) as exc:
             raise LLMError(f"LLM request failed: {exc}") from exc
         if not isinstance(message, dict):
             raise LLMError("Unexpected response shape from the LLM")
         return message
+
+    async def _post(self, body: dict[str, Any]) -> httpx.Response:
+        """POST with bounded retries on 429/5xx/network errors; the slot is free while waiting."""
+        for attempt in range(_ATTEMPTS):
+            last = attempt == _ATTEMPTS - 1
+            try:
+                async with self._semaphore or nullcontext():
+                    response = await self._client.post(self._url, json=body, headers=self._headers)
+                if response.status_code not in _RETRYABLE_STATUS or last:
+                    return response.raise_for_status()
+            except httpx.TransportError:
+                if last:
+                    raise
+            await asyncio.sleep(_BACKOFF * 2**attempt)
+        raise AssertionError("unreachable")  # pragma: no cover
 
 
 def build_http_llm_client(
