@@ -9,6 +9,7 @@ from papertrace.llm.base import LLMClient, Message, ToolSpec
 
 logger = logging.getLogger(__name__)
 
+_CORRECTIONS = 1  # times a rejected report goes back to the model
 REJECTED_REASON = (
     "The verifier's report failed validation against the abstracts, so its claims are unchecked. "
     "The draft is unchanged; try again to verify it."
@@ -98,17 +99,23 @@ class VerificationAgent:
             },
             ensure_ascii=False,
         )
-        report = await self._llm.call_tool(
-            system=_SYSTEM, messages=[Message(role="user", content=payload)], tool=_TOOL
+        messages = [Message(role="user", content=payload)]
+        for _ in range(_CORRECTIONS + 1):
+            report = await self._llm.call_tool(system=_SYSTEM, messages=messages, tool=_TOOL)
+            try:
+                return validate_report(report, synthesis, papers)
+            except InvalidReportError as exc:
+                logger.warning("Verifier report rejected: %s", exc)
+                # The rejection reason names what to fix, so the model can correct its own report.
+                messages = [
+                    *messages,
+                    Message(role="assistant", content=report.model_dump_json()),
+                    Message(
+                        role="user",
+                        content=f"Your report was rejected: {exc}. Submit a corrected report.",
+                    ),
+                ]
+        # Verification is advisory: a bad report must not discard a valid synthesis.
+        return VerificationResult(
+            claims=[], findings=[], status="not_verifiable", reason=REJECTED_REASON
         )
-        try:
-            return validate_report(report, synthesis, papers)
-        except InvalidReportError as exc:
-            # Verification is advisory: a bad report must not discard a valid synthesis.
-            logger.warning("Verifier report rejected: %s", exc)
-            return VerificationResult(
-                claims=[],
-                findings=[],
-                status="not_verifiable",
-                reason=REJECTED_REASON,
-            )

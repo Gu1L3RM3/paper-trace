@@ -29,6 +29,23 @@ class FakeLLMClient:
         return self._text
 
 
+class ScriptedLLMClient:
+    """Answers call_tool with one canned model per call, in order, and records every call."""
+
+    def __init__(self, *results: BaseModel) -> None:
+        self._results = list(results)
+        self.calls: list[list[Message]] = []
+
+    async def call_tool[T: BaseModel](
+        self, *, system: str, messages: list[Message], tool: ToolSpec[T]
+    ) -> T:
+        self.calls.append(messages)
+        return tool.output.model_validate(self._results[len(self.calls) - 1].model_dump())
+
+    async def complete(self, *, system: str, messages: list[Message]) -> str:
+        raise NotImplementedError
+
+
 class FakePaperSource:
     """Maps query -> papers (or an exception) after an async delay."""
 

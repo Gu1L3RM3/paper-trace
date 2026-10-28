@@ -126,7 +126,9 @@ The draft synthesis streams as soon as it exists; only the revised pair waits fo
 
 Every `error` message follows "cause. next step" (for example the config variable to check, or
 "try again"), never echoes provider payloads, keys or the OpenAlex `mailto`, and is covered by
-`tests/unit/test_error_messages.py`.
+`tests/unit/test_error_messages.py`. Errors the model can fix are returned to it once: invalid
+tool arguments or a skipped tool inside `OpenAIClient.call_tool`, a rejected verifier report in
+`VerificationAgent.verify`. Network and API failures are not, since the model cannot fix them.
 
 | Condition | Behavior visible to the client |
 |---|---|

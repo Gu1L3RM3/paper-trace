@@ -1,10 +1,15 @@
 import pytest
 
-from papertrace.agents.verification import VerificationAgent
+from papertrace.agents.verification import REJECTED_REASON, VerificationAgent
 from papertrace.domain.errors import InvalidReportError
 from papertrace.domain.models import Paper, ResearchQuestion, SynthesisResult
-from papertrace.domain.verification import ClaimAssessment, EvidenceReference, VerificationReport
-from tests.fakes import FakeLLMClient, papers
+from papertrace.domain.verification import (
+    ClaimAssessment,
+    EvidenceReference,
+    VerificationReport,
+    VerificationResult,
+)
+from tests.fakes import FakeLLMClient, ScriptedLLMClient, papers
 
 
 async def test_verification_validates_real_evidence_and_prompt() -> None:
@@ -296,3 +301,49 @@ async def test_prompts_carry_only_the_fields_the_agents_need() -> None:
         assert paper.url not in content
         assert "insufficient_evidence" not in content
         assert paper.title in content
+
+
+def _report(quote: str) -> VerificationReport:
+    return VerificationReport(
+        claims=[
+            ClaimAssessment(
+                text="claim",
+                assessment="unsupported",
+                reason="r",
+                evidence=[EvidenceReference(paper_index=1, quote=quote)],
+            )
+        ],
+        findings=[],
+    )
+
+
+async def _verify_with(llm: ScriptedLLMClient) -> VerificationResult:
+    paper = next(p for p in papers() if p.abstract)
+    return await VerificationAgent(llm).verify(
+        ResearchQuestion(text="q"),
+        SynthesisResult(markdown="claim", unmatched_citations=[], insufficient_evidence=False),
+        [paper],
+    )
+
+
+async def test_rejected_report_is_returned_to_the_model_for_one_correction() -> None:
+    paper = next(p for p in papers() if p.abstract)
+    good = (paper.abstract or "").split(". ")[0]
+    llm = ScriptedLLMClient(_report("fabricated evidence"), _report(good))
+
+    result = await _verify_with(llm)
+
+    assert result.status != "not_verifiable"
+    first, second = llm.calls
+    assert len(first) == 1 and [m.role for m in second] == ["user", "assistant", "user"]
+    assert "fabricated evidence" in second[1].content
+    assert "absent from the abstract" in second[2].content
+
+
+async def test_a_second_rejection_degrades_after_exactly_two_calls() -> None:
+    llm = ScriptedLLMClient(_report("fabricated one"), _report("fabricated two"))
+
+    result = await _verify_with(llm)
+
+    assert result.status == "not_verifiable" and result.reason == REJECTED_REASON
+    assert len(llm.calls) == 2
