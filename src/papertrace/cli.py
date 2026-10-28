@@ -2,6 +2,7 @@ import asyncio
 import sys
 
 import httpx
+from pydantic import ValidationError
 
 from papertrace.agents.orchestrator import OrchestratorAgent
 from papertrace.agents.research import ResearchAgent
@@ -22,10 +23,10 @@ def format_papers(papers: list[Paper]) -> str:
 
 
 def _author(paper: Paper) -> str:
-    if not paper.authors:
+    words = paper.authors[0].split() if paper.authors else []
+    if not words:
         return "Unknown"
-    surname = paper.authors[0].split()[-1]
-    return surname if len(paper.authors) == 1 else f"{surname} et al."
+    return words[-1] if len(paper.authors) == 1 else f"{words[-1]} et al."
 
 
 async def _run(question: str, settings: Settings) -> str:
@@ -45,7 +46,13 @@ def main() -> int:
         print('usage: python -m papertrace.cli "<question>"', file=sys.stderr)
         return 2
     try:
-        print(asyncio.run(_run(sys.argv[1], Settings())))
+        settings = Settings()
+    except ValidationError as exc:
+        fields = ", ".join(str(e["loc"][0]).upper() for e in exc.errors())
+        print(f"error: invalid configuration, check: {fields}", file=sys.stderr)
+        return 1
+    try:
+        print(asyncio.run(_run(sys.argv[1], settings)))
     except PaperTraceError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
