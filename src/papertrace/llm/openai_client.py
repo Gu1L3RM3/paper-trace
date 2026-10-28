@@ -121,10 +121,11 @@ class OpenAIClient:
                     f"Model {self._model!r} did not call {tool.name}. Try again; if it keeps "
                     "happening, set LLM_MODEL to a model that supports function calling."
                 )
-                turn = [
-                    {"role": "assistant", "content": message.content or ""},
-                    {"role": "user", "content": f"Call the tool {tool.name} to answer."},
-                ]
+                # An assistant turn without text or tool calls is invalid for some providers.
+                turn = (
+                    [{"role": "assistant", "content": message.content}] if message.content else []
+                )
+                turn.append({"role": "user", "content": f"Call the tool {tool.name} to answer."})
             else:
                 try:
                     return tool.output.model_validate_json(call.function.arguments)

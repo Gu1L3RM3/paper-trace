@@ -56,3 +56,15 @@ async def test_a_skipped_tool_is_requested_again() -> None:
     assert result == Answer(value=7)
     assert _sent(route, 1)[-1]["role"] == "user"
     assert "answer" in str(_sent(route, 1)[-1]["content"])
+
+
+@respx.mock
+async def test_a_silent_skip_does_not_replay_an_empty_assistant_turn() -> None:
+    silent = httpx.Response(
+        200, json={"choices": [{"index": 0, "message": {"role": "assistant", "content": ""}}]}
+    )
+    route = respx.post(URL).mock(side_effect=[silent, _tool_reply(GOOD)])
+    async with httpx.AsyncClient() as http:
+        await _client(http).call_tool(system="s", messages=MESSAGES, tool=TOOL)
+
+    assert [m["role"] for m in _sent(route, 1)] == ["system", "user", "user"]
