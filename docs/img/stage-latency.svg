@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 260" font-family="Georgia,serif" font-size="13"><rect width="760" height="260" fill="#f7f7f5"/><text x="20" y="28" font-size="15" fill="#152d3b">Wall-clock seconds per stage (gpt-5.4-mini plans, gpt-5.4 writes and verifies)</text>
+<text x="20" y="73" fill="#152d3b">Q1 EN (fasting)</text>
+<rect x="170.0" y="55" width="3.8" height="28" fill="#8aa5b3"/>
+<rect x="173.8" y="55" width="7.1" height="28" fill="#22766b"/>
+<rect x="181.0" y="55" width="36.7" height="28" fill="#152d3b"/>
+<rect x="217.7" y="55" width="267.4" height="28" fill="#c9a227"/>
+<text x="491.1" y="74" fill="#152d3b">158s</text>
+<text x="20" y="125" fill="#152d3b">Q2 PT (exercise)</text>
+<rect x="170.0" y="107" width="2.3" height="28" fill="#8aa5b3"/>
+<rect x="172.3" y="107" width="7.1" height="28" fill="#22766b"/>
+<rect x="179.4" y="107" width="53.2" height="28" fill="#152d3b"/>
+<rect x="232.6" y="107" width="217.3" height="28" fill="#c9a227"/>
+<text x="456.0" y="126" fill="#152d3b">140s</text>
+<text x="20" y="177" fill="#152d3b">Q3 EN (LLM vuln.)</text>
+<rect x="170.0" y="159" width="2.7" height="28" fill="#8aa5b3"/>
+<rect x="172.7" y="159" width="7.2" height="28" fill="#22766b"/>
+<rect x="179.9" y="159" width="45.5" height="28" fill="#152d3b"/>
+<rect x="225.4" y="159" width="125.3" height="28" fill="#c9a227"/>
+<rect x="350.7" y="159" width="318.7" height="28" fill="#a64b4b"/>
+<text x="675.3" y="178" fill="#152d3b">250s</text>
+<rect x="20" y="225" width="12" height="12" fill="#8aa5b3"/><text x="38" y="236" fill="#152d3b">Plan</text>
+<rect x="160" y="225" width="12" height="12" fill="#22766b"/><text x="178" y="236" fill="#152d3b">Search</text>
+<rect x="300" y="225" width="12" height="12" fill="#152d3b"/><text x="318" y="236" fill="#152d3b">Synthesis</text>
+<rect x="440" y="225" width="12" height="12" fill="#c9a227"/><text x="458" y="236" fill="#152d3b">Verification</text>
+<rect x="580" y="225" width="12" height="12" fill="#a64b4b"/><text x="598" y="236" fill="#152d3b">Revision</text>
+</svg>
