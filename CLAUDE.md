@@ -86,6 +86,17 @@ Ask before expanding scope; propose extras as v2 in `CONTEXT.md` §11.
 - Never `--no-verify`, never force-push `main`, never commit `.env` or `.project-status`.
 - End commit messages with the Co-Authored-By trailer configured for the session.
 
+## Agent hooks (`.claude/settings.json`)
+
+- **PreToolUse** `.claude/hooks/guard.py`: blocks `--no-verify` / `commit -n`, force pushes,
+  pushes to `main` (or any push while on `main`), and any Bash/Read/Edit/Write/Grep touching
+  `.env` or `.env.*` (`.env.example` is allowed). It matches text anywhere in a Bash command, so
+  write docs mentioning those words with Edit/Write, not shell heredocs. If blocked, change
+  approach or ask the user; never work around it.
+- **PostToolUse**: `ruff format` + `ruff check --fix` on every edited `.py` file.
+- **Stop** `.claude/hooks/stop-checks.sh`: with uncommitted Python changes, the turn cannot end
+  while `pytest` or `mypy` fail. Guard behavior is tested in `tests/hooks/`.
+
 ## Style
 
 - Python 3.12, full type hints, `mypy --strict` clean, ruff (line length 100).
