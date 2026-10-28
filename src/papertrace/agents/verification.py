@@ -9,6 +9,11 @@ from papertrace.llm.base import LLMClient, Message, ToolSpec
 
 logger = logging.getLogger(__name__)
 
+REJECTED_REASON = (
+    "The verifier's report failed validation against the abstracts, so its claims are unchecked. "
+    "The draft is unchanged; try again to verify it."
+)
+
 _SYSTEM = (
     "You are an evidence auditor. You check a synthesis against the abstracts of the papers it "
     "was built from, for a reader who needs to know which claims those abstracts support.\n\n"
@@ -105,5 +110,5 @@ class VerificationAgent:
                 claims=[],
                 findings=[],
                 status="not_verifiable",
-                reason="Verifier output failed validation",
+                reason=REJECTED_REASON,
             )

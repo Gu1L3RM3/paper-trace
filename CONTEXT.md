@@ -124,6 +124,10 @@ Success events: `plan` → `papers` → `synthesis` → `verification` → `done
 Each event contains a serialized model; `done` has `{}`. LLM text is not streamed token by token.
 The draft synthesis streams as soon as it exists; only the revised pair waits for the extra calls.
 
+Every `error` message follows "cause. next step" (for example the config variable to check, or
+"try again"), never echoes provider payloads, keys or the OpenAlex `mailto`, and is covered by
+`tests/unit/test_error_messages.py`.
+
 | Condition | Behavior visible to the client |
 |---|---|
 | Missing/blank question or invalid request body | HTTP 422 before a pipeline stream starts. |

@@ -86,16 +86,27 @@ def validate_report(
         if not _normalized(claim.text) or _normalized(claim.text) not in _normalized(
             synthesis.markdown
         ):
-            raise InvalidReportError("Verification claim is absent from the synthesis")
+            raise InvalidReportError(
+                "Verification claim is absent from the synthesis. "
+                "Copy each claim literally from the synthesis"
+            )
         candidates = citation_candidates(claim.text, papers)
         cited = {i for indices in candidates for i in indices}
         if claim.assessment in ("supported", "partially_supported"):
             if not claim.evidence or not cited:
-                raise InvalidReportError("Supported claim needs cited abstract evidence")
+                raise InvalidReportError(
+                    "Supported claim needs cited abstract evidence. "
+                    "Quote the abstract of a paper the claim cites, or mark it unsupported"
+                )
             if any(ref.paper_index not in cited for ref in claim.evidence):
-                raise InvalidReportError("Support must come from a cited paper")
+                raise InvalidReportError(
+                    "Support must come from a cited paper. "
+                    "Quote only papers named in the claim's citation; put others in counterevidence"
+                )
         if claim.assessment == "contradicted" and not (claim.evidence or claim.counterevidence):
-            raise InvalidReportError("Contradicted claim needs evidence")
+            raise InvalidReportError(
+                "Contradicted claim needs evidence. Quote the abstract that states the opposite"
+            )
         ambiguous = ambiguous or any(len(indices) > 1 for indices in candidates)
     if ambiguous:
         findings.append(
@@ -108,14 +119,22 @@ def validate_report(
     references = [ref for claim in report.claims for ref in claim.evidence + claim.counterevidence]
     for finding in findings:
         if finding.kind != "ambiguous_citation" and not finding.evidence:
-            raise InvalidReportError("Verification finding needs abstract evidence")
+            raise InvalidReportError(
+                "Verification finding needs abstract evidence. Add an exact abstract quote for it"
+            )
         references.extend(finding.evidence)
     for ref in references:
         if ref.paper_index > len(papers):
-            raise InvalidReportError("Verification references an unknown paper")
+            raise InvalidReportError(
+                "Verification references an unknown paper. "
+                "Use only the one-based indices of the supplied papers"
+            )
         abstract = papers[ref.paper_index - 1].abstract or ""
         if not _normalized(ref.quote) or _normalized(ref.quote) not in _normalized(abstract):
-            raise InvalidReportError("Verification quote is absent from the abstract")
+            raise InvalidReportError(
+                "Verification quote is absent from the abstract. "
+                "Quote one contiguous passage copied exactly"
+            )
     # Ambiguity alone cannot be fixed by rewriting, so it reports an issue without a revision.
     needs_revision = bool(
         synthesis.unmatched_citations
