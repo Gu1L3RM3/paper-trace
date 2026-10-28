@@ -6,9 +6,9 @@ Read `CONTEXT.md` (what and why) and `PLAN.md` (current stage and its "Done when
 ## Project in one paragraph
 
 PaperTrace AI answers research questions (PT or EN) with a grounded synthesis of real academic papers.
-Three agents: Orchestrator (question → 2–4 English search queries via forced tool call),
+Four agents: Orchestrator (question → 2–4 English search queries via forced tool call),
 Research Agent (parallel OpenAlex search + DOI dedup), Synthesis Agent (Markdown with (Author, Year)
-citations from the retrieved list only). FastAPI streams each stage over SSE to a vanilla JS frontend.
+citations from the retrieved list only), and Verification Agent (abstract support, one bounded revision). FastAPI streams each stage over SSE to a vanilla JS frontend.
 The app is in English. It must never invent papers, authors, DOIs or findings.
 
 ## Commands
@@ -96,7 +96,7 @@ Testing rules:
 
 ## Scope guard (v1)
 
-Do not add, without explicit approval: data sources besides OpenAlex, a verification agent,
+Do not add, without explicit approval: data sources besides OpenAlex, full-text verification,
 persistence, auth, deploy configuration, frontend frameworks or build steps. Propose them as v2.
 
 ## Git and commits

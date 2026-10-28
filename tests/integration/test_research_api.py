@@ -15,7 +15,9 @@ from papertrace.domain.models import (
     SearchQuery,
     SynthesisResult,
 )
+from papertrace.domain.verification import VerificationResult
 from papertrace.pipeline import Pipeline
+from tests.fakes import FakeVerifier
 
 PAPER = Paper(title="T", authors=["A B"], year=2020, doi=None, abstract=None, url="https://x")
 
@@ -36,6 +38,15 @@ class _Researcher:
 
 
 class _Synthesizer:
+    async def revise(
+        self,
+        question: ResearchQuestion,
+        papers: list[Paper],
+        synthesis: SynthesisResult,
+        verification: VerificationResult,
+    ) -> SynthesisResult:
+        return synthesis
+
     async def synthesize(self, question: ResearchQuestion, papers: list[Paper]) -> SynthesisResult:
         return SynthesisResult(
             markdown="ok (A, 2020) (Ghost, 1999)",
@@ -65,12 +76,12 @@ def client() -> Iterator[TestClient]:
 
 def test_streams_stages_in_order_with_typed_payloads(client: TestClient) -> None:
     app.dependency_overrides[get_pipeline] = lambda: Pipeline(
-        _Planner(), _Researcher(), _Synthesizer()
+        _Planner(), _Researcher(), _Synthesizer(), FakeVerifier()
     )
 
     events = _stream(client)
 
-    assert [name for name, _ in events] == ["plan", "papers", "synthesis", "done"]
+    assert [name for name, _ in events] == ["plan", "papers", "synthesis", "verification", "done"]
     assert len(events[0][1]["queries"]) == 2  # type: ignore[arg-type]
     assert events[1][1]["papers"][0]["title"] == "T"  # type: ignore[index]
     assert events[2][1]["unmatched_citations"] == ["Ghost, 1999"]
@@ -78,7 +89,7 @@ def test_streams_stages_in_order_with_typed_payloads(client: TestClient) -> None
 
 def test_stage_failure_arrives_as_error_event_not_500(client: TestClient) -> None:
     app.dependency_overrides[get_pipeline] = lambda: Pipeline(
-        _Planner(), _Researcher(SourceError("OpenAlex down")), _Synthesizer()
+        _Planner(), _Researcher(SourceError("OpenAlex down")), _Synthesizer(), FakeVerifier()
     )
 
     events = _stream(client)
@@ -89,7 +100,7 @@ def test_stage_failure_arrives_as_error_event_not_500(client: TestClient) -> Non
 
 def test_blank_question_is_rejected(client: TestClient) -> None:
     app.dependency_overrides[get_pipeline] = lambda: Pipeline(
-        _Planner(), _Researcher(), _Synthesizer()
+        _Planner(), _Researcher(), _Synthesizer(), FakeVerifier()
     )
     response = client.post("/api/research", json={"text": "  "})
 

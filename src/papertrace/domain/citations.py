@@ -63,3 +63,17 @@ def find_unmatched_citations(text: str, papers: list[Paper]) -> list[str]:
         if (_fold(surname(_first_author(authors))), _year(year)) not in known:
             unmatched[written] = None
     return list(unmatched)
+
+
+def citation_candidates(text: str, papers: list[Paper]) -> list[list[int]]:
+    """Stable one-based candidates for each citation, retaining ambiguity."""
+    return [
+        [
+            i
+            for i, paper in enumerate(papers, 1)
+            if paper.authors
+            and _fold(surname(paper.authors[0])) == _fold(_first_author(authors))
+            and paper.year == _year(year)
+        ]
+        for _, authors, year in _mentions(text)
+    ]

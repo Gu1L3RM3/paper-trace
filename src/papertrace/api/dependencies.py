@@ -8,6 +8,7 @@ from fastapi import Request
 from papertrace.agents.orchestrator import OrchestratorAgent
 from papertrace.agents.research import ResearchAgent
 from papertrace.agents.synthesis import SynthesisAgent
+from papertrace.agents.verification import VerificationAgent
 from papertrace.llm.factory import build_llm_client
 from papertrace.pipeline import Pipeline
 from papertrace.settings import Settings
@@ -27,6 +28,11 @@ def build_pipeline(settings: Settings, http: httpx.AsyncClient) -> Pipeline:
         ResearchAgent(OpenAlexSource(client=http, mailto=settings.openalex_mailto)),
         SynthesisAgent(
             build_llm_client(settings, model=settings.model_for("synthesis"), semaphore=semaphore)
+        ),
+        VerificationAgent(
+            build_llm_client(
+                settings, model=settings.model_for("verification"), semaphore=semaphore
+            )
         ),
     )
 

@@ -15,9 +15,12 @@ class Settings(BaseSettings):
     llm_base_url: str
     orchestrator_model: str | None = None
     synthesis_model: str | None = None
+    verification_model: str | None = None
     llm_max_concurrency: int = 4
     openalex_mailto: str | None = None
 
-    def model_for(self, agent: Literal["orchestrator", "synthesis"]) -> str:
+    def model_for(self, agent: Literal["orchestrator", "synthesis", "verification"]) -> str:
+        if agent == "verification":
+            return self.verification_model or self.model_for("synthesis")
         override = self.orchestrator_model if agent == "orchestrator" else self.synthesis_model
         return override or self.llm_model

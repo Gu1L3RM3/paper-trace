@@ -63,4 +63,4 @@ async def test_papers_without_any_abstract_count_as_insufficient_evidence() -> N
     result = await SynthesisAgent(llm).synthesize(QUESTION, [PAPERS[1]])
 
     assert result.insufficient_evidence is True
-    assert len(llm.calls) == 1
+    assert len(llm.calls) == 0
