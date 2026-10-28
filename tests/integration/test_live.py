@@ -34,3 +34,27 @@ async def test_question_in_portuguese_yields_real_papers() -> None:
         result = await ResearchAgent(OpenAlexSource(client=http)).research(plan)
     assert 2 <= len(plan.queries) <= 4
     assert result.papers
+
+
+async def test_live_verification_report() -> None:
+    from papertrace.agents.synthesis import SynthesisAgent
+    from papertrace.agents.verification import VerificationAgent
+    from tests.fakes import papers
+
+    try:
+        settings = Settings()
+    except ValidationError:
+        pytest.skip("LLM credentials not configured")
+    question = ResearchQuestion(
+        text="What do the retrieved abstracts say about fasting and cognition?"
+    )
+    evidence = [p for p in papers() if p.abstract]
+    synthesis = await SynthesisAgent(
+        build_llm_client(settings, model=settings.model_for("synthesis"))
+    ).synthesize(question, evidence)
+    report = await VerificationAgent(
+        build_llm_client(settings, model=settings.model_for("verification"))
+    ).verify(question, synthesis, evidence)
+    assert report.claims
+    assert report.reason
+    print(report.model_dump_json(indent=2))

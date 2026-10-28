@@ -17,6 +17,7 @@ async def test_all_agents_share_one_semaphore_and_their_own_model() -> None:
 
     register_llm_provider("recording", recording)  # type: ignore[arg-type]
     settings = Settings(
+        _env_file=None,
         llm_provider="recording",
         llm_model="base",
         llm_base_url="http://x",
@@ -26,5 +27,5 @@ async def test_all_agents_share_one_semaphore_and_their_own_model() -> None:
     async with httpx.AsyncClient() as http:
         build_pipeline(settings, http)
 
-    assert [model for model, _ in seen] == ["base", "big"]
-    assert seen[0][1] is not None and seen[0][1] is seen[1][1]
+    assert [model for model, _ in seen] == ["base", "big", "big"]
+    assert seen[0][1] is not None and all(sem is seen[0][1] for _, sem in seen)

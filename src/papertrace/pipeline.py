@@ -13,6 +13,7 @@ from papertrace.domain.models import (
     SearchPlan,
     SynthesisResult,
 )
+from papertrace.domain.verification import VerificationResult
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ class ErrorPayload(BaseModel):
 
 @dataclass(frozen=True)
 class StageEvent:
-    name: Literal["plan", "papers", "synthesis", "error", "done"]
+    name: Literal["plan", "papers", "synthesis", "verification", "error", "done"]
     payload: BaseModel | None = None
 
 
@@ -40,14 +41,31 @@ class Synthesizer(Protocol):
         self, question: ResearchQuestion, papers: list[Paper]
     ) -> SynthesisResult: ...
 
+    async def revise(
+        self,
+        question: ResearchQuestion,
+        papers: list[Paper],
+        synthesis: SynthesisResult,
+        verification: VerificationResult,
+    ) -> SynthesisResult: ...
+
+
+class Verifier(Protocol):
+    async def verify(
+        self, question: ResearchQuestion, synthesis: SynthesisResult, papers: list[Paper]
+    ) -> VerificationResult: ...
+
 
 class Pipeline:
     """Only coordinates: each stage's decisions live in its agent."""
 
-    def __init__(self, planner: Planner, researcher: Researcher, synthesizer: Synthesizer) -> None:
+    def __init__(
+        self, planner: Planner, researcher: Researcher, synthesizer: Synthesizer, verifier: Verifier
+    ) -> None:
         self._planner = planner
         self._researcher = researcher
         self._synthesizer = synthesizer
+        self._verifier = verifier
 
     async def run(self, question: ResearchQuestion) -> AsyncIterator[StageEvent]:
         try:
@@ -58,9 +76,18 @@ class Pipeline:
             if not result.papers and result.failed_queries:
                 # Nothing came back and part of the search broke: that is not "no evidence".
                 raise SourceError(f"Search failed for: {', '.join(result.failed_queries)}")
-            yield StageEvent(
-                "synthesis", await self._synthesizer.synthesize(question, result.papers)
-            )
+            synthesis = await self._synthesizer.synthesize(question, result.papers)
+            verification = await self._verifier.verify(question, synthesis, result.papers)
+            if any(p.abstract and p.abstract.strip() for p in result.papers) and (
+                verification.status != "no_issues_found" or synthesis.unmatched_citations
+            ):
+                synthesis = await self._synthesizer.revise(
+                    question, result.papers, synthesis, verification
+                )
+                verification = await self._verifier.verify(question, synthesis, result.papers)
+                verification = verification.model_copy(update={"revision_count": 1})
+            yield StageEvent("synthesis", synthesis)
+            yield StageEvent("verification", verification)
             yield StageEvent("done")
         except PaperTraceError as exc:
             yield StageEvent("error", ErrorPayload(message=str(exc)))

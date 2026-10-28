@@ -36,7 +36,7 @@ curl -N -X POST localhost:8000/api/research -H 'content-type: application/json' 
   -d '{"text":"Does sleep improve memory?"}'
 ```
 
-Streams SSE events in order: `plan`, `papers`, `synthesis`, `done`. Failures arrive as one
+Streams SSE events in order: `plan`, `papers`, `synthesis`, `verification`, `done`. Failures arrive as one
 `error` event (`{"message": ...}`) instead of an HTTP 500. `synthesis.unmatched_citations` lists
 any `(Author, Year)` the answer cites that no retrieved paper backs.
 
@@ -52,3 +52,32 @@ agents or existing adapters:
 
 The built-in `chat_completions` provider needs only `LLM_BASE_URL` and `LLM_MODEL`; `LLM_API_KEY`
 is optional for keyless local servers.
+
+## Abstract evidence verification
+
+The API keeps the draft internal, verifies its factual claims against retrieved abstracts, and
+revises at most once before verifying the final text again. Only the final synthesis and its
+corresponding verification report are streamed. Verification failures emit `error`, without a
+final synthesis or `done`. Persistent scientific issues are delivered explicitly in the report.
+`done` means processing completed, not that scientific correctness is guaranteed.
+
+`verification` includes `claims`, `findings`, `status`, `reason` and `revision_count` (0 or 1).
+Each claim includes a literal synthesis span, an assessment (`supported`, `partially_supported`,
+`contradicted`, `unsupported`), reason, evidence and counterevidence. Evidence contains a one-based
+`paper_index` into the streamed paper list and an exact abstract `quote` (whitespace may differ).
+Findings describe relevant omissions, contradictions or ambiguous author/year citations.
+Status is computed in code: `no_issues_found`, `issues_found`, or `not_verifiable`. Empty reports
+cannot establish support. References and quoted spans are validated deterministically; semantic
+support and extraction completeness still depend on the LLM. Titles alone are never evidence.
+
+Without usable abstracts, synthesis and verification skip their LLM calls and return an explicit
+insufficient-evidence response. Partial search failures remain visible in `papers.failed_queries`.
+The retrieval-only CLI is unchanged. No new sources or full-text retrieval are introduced.
+
+Set optional `VERIFICATION_MODEL` to override the verifier; otherwise it uses the effective
+`SYNTHESIS_MODEL` (or `LLM_MODEL`). All agents share `LLM_MAX_CONCURRENCY`. A normal run uses three
+logical LLM calls; one revision raises this to five, excluding transport retries. Clients must
+consume the new `verification` event and wait for `done` before treating the run as complete.
+
+Live verification tests are opt-in (`uv run pytest -m live`). Inspect the emitted report against
+its abstracts manually; fake-based tests establish flow and validation, not scientific accuracy.

@@ -28,13 +28,14 @@ The whole application (UI, prompts, logs, docs) is in English. User questions ma
 
 ## 3. v1 scope
 
-Three agents, one data source, no persistence, no cross-database verification.
+Four agents, one data source, no persistence, no cross-database verification. Abstract-only verification was explicitly approved.
 Anything beyond this is v2 and needs explicit approval before being added.
 
 | Agent | Input | Output | Notes |
 |---|---|---|---|
 | **Orchestrator** | `ResearchQuestion` | `SearchPlan` (2–4 `SearchQuery`) | Forced tool call (structured output). Queries are always in English and each covers a different angle. |
 | **Research Agent** | `SearchPlan` | `list[Paper]` | Runs all queries against OpenAlex concurrently with `asyncio.gather` over real I/O. Deduplicates by DOI (normalized title when DOI is missing). |
+| **Verification Agent** | Question + synthesis + retrieved papers | Structured claim/evidence report | Checks abstract support; requests at most one synthesis revision and re-verifies. |
 | **Synthesis Agent** | `list[Paper]` + question | `Synthesis` (Markdown) | Sees only the structured paper list, never free web text. Cites as (Author, Year). Must state when evidence is insufficient. |
 
 Contracts between agents are Pydantic models, never loose dicts.
@@ -54,7 +55,7 @@ class Synthesis(BaseModel):       markdown: str; citations: list[Citation]
 
 ### Grounding guarantee in v1
 
-There is no separate verification agent in v1. Grounding relies on:
+An explicitly approved verification agent now assesses abstract support. Grounding relies on:
 1. the Synthesis Agent prompt (cite only listed papers, admit gaps), and
 2. a deterministic post-check in code: every (Author, Year) cited must match a paper in the input list.
    Mismatches are surfaced in `unmatched_citations`, never silently dropped.
@@ -92,7 +93,7 @@ tests/
 
 ### Streaming events (SSE)
 
-`plan` → `papers` → `synthesis` → `done`; `error` may replace any step. Each event payload is a
+`plan` → `papers` → `synthesis` → `verification` → `done`; `error` may replace any step. Each event payload is a
 serialized Pydantic model, so the frontend renders typed data, not scraped text.
 
 ## 5. LLM provider independence
@@ -120,7 +121,7 @@ The project must run on any LLM that supports tool calling, and switching provid
 | `LLM_API_KEY` | — | Optional bearer key |
 | `LLM_MODEL` | the name your server expects | Default model for all agents (required) |
 | `LLM_BASE_URL` | `http://localhost:11434/v1` | Chat/completions endpoint (required) |
-| `ORCHESTRATOR_MODEL`, `SYNTHESIS_MODEL` | — | Optional per-agent overrides |
+| `ORCHESTRATOR_MODEL`, `SYNTHESIS_MODEL`, `VERIFICATION_MODEL` | — | Optional per-agent overrides |
 | `LLM_MAX_CONCURRENCY` | `4` | Parallel LLM calls cap |
 | `OPENALEX_MAILTO` | `you@example.com` | OpenAlex polite pool |
 
@@ -160,14 +161,14 @@ Frontend: vanilla HTML/CSS/JS served by FastAPI, no framework, no build step.
 A distinctive visual identity drawn from the domain: academic research, citations, traceability.
 Think library catalog cards, footnotes, citation trails, the margin notes of a paper. Avoid generic SaaS
 looks: no identical rounded cards, no decorative gradients, no cream+terracotta "AI" palette.
-The UI shows the three stages live (plan, papers, synthesis) as SSE events arrive — not a spinner.
+The planned UI shows plan, papers, final synthesis and verification as SSE events arrive.
 Every citation in the synthesis links to the paper it came from. The `frontend-design` skill is used
 before any CSS is written.
 
 ## 9. Constraints (v1)
 
 - OpenAlex is the only data source.
-- No separate citation-verification agent.
+- Abstract-only verification is approved; no full-text or cross-source verification.
 - No persistence, no auth, no deploy.
 - Do not expand scope without asking.
 
@@ -180,7 +181,7 @@ before any CSS is written.
 ## 11. v2 roadmap
 
 - Additional sources: arXiv, Crossref; cross-source deduplication and verification.
-- Dedicated citation-verification agent checking claims against abstracts/full text.
+- Extend verification to full text; abstract-only checking is implemented.
 - Persistence of research sessions and exports (BibTeX, Markdown).
 
 ## 12. Glossary
@@ -189,3 +190,14 @@ before any CSS is written.
 - **Adapter** — a concrete implementation of a port for one vendor.
 - **Composition root** — the one place where adapters are instantiated and injected.
 - **Grounded** — every claim and citation traces back to a retrieved paper.
+
+### Approved verification extension
+
+The draft stays internal. The verifier uses forced tool calling through `LLMClient`, with literal
+claim spans and abstract quotes validated in `domain/`. Non-supported claims, findings, empty
+assessments or unmatched citations trigger one revision and full re-verification. The final report
+alone is delivered, including remaining issues. Technical failure ends with `error` and no `done`.
+Missing usable abstracts skip synthesis/verification LLM calls. Empty assessments never pass.
+`VERIFICATION_MODEL` defaults to the effective synthesis model and shares the concurrency cap.
+This is not proof of claim truth: the LLM may omit claims or misjudge support, and abstracts are
+incomplete. Bibliographic identity still uses author/year, with ambiguity reported explicitly.

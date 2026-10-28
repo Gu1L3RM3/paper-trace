@@ -99,7 +99,7 @@ Work:
 3. Error and empty states: no results, provider error, missing API key (checked at startup).
 4. `papertrace` console script starts the server.
 5. Full README: architecture diagram, technical decisions, how to run, example run, v1 limitations,
-   v2 roadmap (arXiv, Crossref, citation-verification agent).
+   v2 roadmap (arXiv, Crossref, full-text verification).
 6. Tests: static route served, settings validation, end-to-end SSE with fakes.
 
 SOLID focus: **S** in the frontend too (render functions per event type, one stream reader).
@@ -114,4 +114,18 @@ SOLID focus: **S** in the frontend too (render functions per event type, one str
 
 ## Out of scope (v1)
 
-Extra data sources, a verification agent, persistence, auth, deploy. See `CONTEXT.md` §9–11.
+Extra data sources, full-text verification, persistence, auth, deploy. See `CONTEXT.md` §9–11.
+
+
+## Approved extension — Abstract evidence verifier
+
+- [x] Typed claim assessments, findings and evidence references, validated against actual inputs.
+- [x] Verifier through the existing provider port and shared semaphore; optional model override.
+- [x] At most one synthesis revision and re-verification; drafts remain internal.
+- [x] Final-only `synthesis`, `verification`, `done`; technical failures emit `error` instead.
+- [x] No usable abstracts means deterministic insufficient evidence without LLM calls.
+- [x] Offline flow and provenance tests; coverage at least 85%, mypy and pre-commit.
+- [ ] Live report inspected against real abstracts (opt-in credentials and paid API access).
+
+Frontend remains a separate Stage 3 deliverable. A successful report is an LLM assessment of
+abstract support, not a scientific guarantee. No sources, persistence or full-text fetching added.

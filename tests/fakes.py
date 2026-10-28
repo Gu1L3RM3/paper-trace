@@ -1,8 +1,12 @@
 import asyncio
+import json
+from pathlib import Path
 
 from pydantic import BaseModel
 
-from papertrace.domain.models import Paper, ResearchQuestion
+from papertrace.domain.models import Paper, ResearchQuestion, SynthesisResult
+from papertrace.domain.papers import abstract_from_inverted_index
+from papertrace.domain.verification import VerificationResult
 from papertrace.llm.base import Message, ToolSpec
 
 
@@ -45,3 +49,25 @@ def build_fake_llm(
 ) -> FakeLLMClient:
     """Plugin entry point used to prove providers can live outside the package."""
     return FakeLLMClient(ResearchQuestion(text="x"), text=f"model={model}")
+
+
+class FakeVerifier:
+    async def verify(
+        self, question: ResearchQuestion, synthesis: "SynthesisResult", papers: list[Paper]
+    ) -> "VerificationResult":
+        return VerificationResult(claims=[], findings=[], status="no_issues_found", reason="fake")
+
+
+def papers() -> list[Paper]:
+    works = json.loads(Path("tests/fixtures/openalex_works.json").read_text())["results"]
+    return [
+        Paper(
+            title=w["title"],
+            authors=[a["author"]["display_name"] for a in w["authorships"]],
+            year=w["publication_year"],
+            doi=w["doi"],
+            abstract=abstract_from_inverted_index(w.get("abstract_inverted_index")),
+            url=w["id"],
+        )
+        for w in works
+    ]
