@@ -34,9 +34,10 @@ async def _run(question: str, settings: Settings) -> str:
     async with httpx.AsyncClient(timeout=30) as http:
         source = OpenAlexSource(client=http, mailto=settings.openalex_mailto)
         plan = await OrchestratorAgent(llm).plan(ResearchQuestion(text=question))
-        papers = await ResearchAgent(source).research(plan)
+        result = await ResearchAgent(source).research(plan)
     queries = "\n".join(f"- {q.query} ({q.angle})" for q in plan.queries)
-    return f"Queries:\n{queries}\n\n{format_papers(papers)}"
+    warning = "".join(f"\nWarning: search failed for {q!r}" for q in result.failed_queries)
+    return f"Queries:\n{queries}\n\n{format_papers(result.papers)}{warning}"
 
 
 def main() -> int:

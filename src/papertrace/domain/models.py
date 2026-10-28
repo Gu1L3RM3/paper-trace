@@ -35,3 +35,9 @@ class Paper(BaseModel):
         if value is None:
             return None
         return _DOI_PREFIX.sub("", value.strip()).lower()
+
+
+class ResearchResult(BaseModel):
+    papers: list[Paper]
+    # Queries whose search failed, so callers can tell a narrowed result from a complete one.
+    failed_queries: list[str]
