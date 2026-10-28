@@ -136,8 +136,10 @@ class _Verifier:
         self,
         status: Literal["no_issues_found", "issues_found", "not_verifiable"] = "no_issues_found",
         error: Exception | None = None,
+        needs_revision: bool | None = None,
     ) -> None:
         self.status = status
+        self.needs_revision = status == "issues_found" if needs_revision is None else needs_revision
         self.error = error
         self.calls = 0
 
@@ -149,7 +151,13 @@ class _Verifier:
         self.calls += 1
         if self.error:
             raise self.error
-        return VerificationResult(claims=[], findings=[], status=self.status, reason="test")
+        return VerificationResult(
+            claims=[],
+            findings=[],
+            status=self.status,
+            reason="test",
+            needs_revision=self.needs_revision,
+        )
 
 
 async def test_revision_is_bounded_and_only_final_is_emitted() -> None:
@@ -221,3 +229,46 @@ async def test_second_verification_and_revision_failures_hide_final() -> None:
     ]:
         events = await _run(Pipeline(_Planner(), RealResearcher(), synth, verifier))
         assert [e.name for e in events] == ["plan", "papers", "error"]
+
+
+class _CountingRevisions(_Synthesizer):
+    def __init__(self, unmatched: list[str]) -> None:
+        super().__init__()
+        self.calls = 0
+        self.unmatched = unmatched
+
+    async def revise(
+        self,
+        question: ResearchQuestion,
+        papers: list[Paper],
+        synthesis: SynthesisResult,
+        verification: VerificationResult,
+    ) -> SynthesisResult:
+        self.calls += 1
+        return synthesis.model_copy(
+            update={"markdown": "revised", "unmatched_citations": self.unmatched}
+        )
+
+
+class _RealResearcher(_Researcher):
+    async def research(self, plan: SearchPlan) -> ResearchResult:
+        from tests.fakes import papers
+
+        return ResearchResult(papers=papers(), failed_queries=[])
+
+
+async def test_issues_a_rewrite_cannot_fix_skip_the_revision() -> None:
+    synth = _CountingRevisions([])
+    verifier = _Verifier("issues_found", needs_revision=False)
+    events = await _run(Pipeline(_Planner(), _RealResearcher(), synth, verifier))
+    assert [e.name for e in events][-1] == "done"
+    assert synth.calls == 0 and verifier.calls == 1
+
+
+async def test_revision_that_adds_unmatched_citations_is_discarded() -> None:
+    synth = _CountingRevisions(["Ghost, 1900"])
+    verifier = _Verifier("issues_found")
+    events = await _run(Pipeline(_Planner(), _RealResearcher(), synth, verifier))
+    assert isinstance(events[2].payload, SynthesisResult)
+    assert events[2].payload.markdown != "revised"
+    assert synth.calls == 1 and verifier.calls == 1
