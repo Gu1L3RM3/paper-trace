@@ -31,8 +31,23 @@ class OpenAlexSource:
             response = await self._client.get(_URL, params=params)
             response.raise_for_status()
             works = response.json()["results"]
-        except (httpx.HTTPError, ValueError, KeyError) as exc:
-            raise SourceError(f"OpenAlex search failed: {exc}") from exc
+        except httpx.HTTPStatusError as exc:
+            # Not str(exc): httpx echoes the URL, which carries the polite-pool mailto.
+            code = exc.response.status_code
+            hint = " Set OPENALEX_MAILTO to join the polite pool." if code == 429 else ""
+            raise SourceError(
+                f"OpenAlex answered HTTP {code}. Try again in a moment.{hint}"
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise SourceError(
+                "Cannot reach OpenAlex (network error or timeout). Check the connection, then "
+                "try again."
+            ) from exc
+        except (ValueError, KeyError) as exc:
+            raise SourceError(
+                "OpenAlex returned an unexpected response. Try again; if it persists, the API "
+                "format may have changed."
+            ) from exc
         return [paper for work in works if (paper := _to_paper(work)) is not None]
 
 

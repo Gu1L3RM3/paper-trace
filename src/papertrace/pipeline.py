@@ -18,6 +18,9 @@ from papertrace.domain.verification import VerificationResult
 logger = logging.getLogger(__name__)
 
 
+_INTERNAL_ERROR = "Unexpected internal error. Try again; if it persists, check the server logs."
+
+
 class ErrorPayload(BaseModel):
     message: str
 
@@ -75,7 +78,10 @@ class Pipeline:
             yield StageEvent("papers", result)
             if not result.papers and result.failed_queries:
                 # Nothing came back and part of the search broke: that is not "no evidence".
-                raise SourceError(f"Search failed for: {', '.join(result.failed_queries)}")
+                raise SourceError(
+                    "Every search failed, so there is nothing to cite: "
+                    f"{', '.join(result.failed_queries)}. Try again in a moment."
+                )
             synthesis = await self._synthesizer.synthesize(question, result.papers)
             yield StageEvent("synthesis", synthesis)
             verification = await self._verifier.verify(question, synthesis, result.papers)
@@ -90,7 +96,10 @@ class Pipeline:
             yield StageEvent("error", ErrorPayload(message=str(exc)))
         except Exception:
             logger.exception("Unexpected pipeline failure")
-            yield StageEvent("error", ErrorPayload(message="Unexpected internal error"))
+            yield StageEvent(
+                "error",
+                ErrorPayload(message=_INTERNAL_ERROR),
+            )
 
     async def _revise(
         self,

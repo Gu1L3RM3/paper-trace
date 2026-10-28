@@ -2,7 +2,18 @@ import asyncio
 from contextlib import nullcontext
 from typing import Any, cast
 
-from openai import AsyncOpenAI, OpenAIError
+from openai import (
+    APIConnectionError,
+    APIStatusError,
+    APITimeoutError,
+    AsyncOpenAI,
+    AuthenticationError,
+    BadRequestError,
+    NotFoundError,
+    OpenAIError,
+    PermissionDeniedError,
+    RateLimitError,
+)
 from openai.types.chat import ChatCompletionMessage, ChatCompletionMessageParam
 from pydantic import BaseModel, ValidationError
 
@@ -34,6 +45,36 @@ def _clean(node: Any) -> Any:
 def tool_parameters(model: type[BaseModel]) -> dict[str, Any]:
     """JSON Schema sent to the API: portable across strict decoders, validated locally."""
     return _clean(model.model_json_schema())  # type: ignore[no-any-return]
+
+
+def _explain(exc: Exception, model: str) -> str:
+    """Cause plus next step. Provider texts are relayed only for 400s: auth errors can echo keys."""
+    if isinstance(exc, APITimeoutError):
+        return "The OpenAI request timed out. Try again, or use a faster model in LLM_MODEL."
+    if isinstance(exc, APIConnectionError):
+        return (
+            "Cannot reach the OpenAI API. Check the network connection and, if set, LLM_BASE_URL."
+        )
+    if isinstance(exc, AuthenticationError | PermissionDeniedError):
+        return "OpenAI rejected the credentials. Check that LLM_API_KEY is valid and has access."
+    if isinstance(exc, NotFoundError):
+        return (
+            f"Model {model!r} was not found. Set LLM_MODEL (or the per-agent override) to a "
+            "model your account can use."
+        )
+    if isinstance(exc, RateLimitError):
+        return (
+            "OpenAI rate limit or quota exceeded. Wait a moment and try again, lower "
+            "LLM_MAX_CONCURRENCY, or check the account's billing."
+        )
+    if isinstance(exc, BadRequestError):
+        return (
+            f"OpenAI rejected the request: {exc.message}. Check that {model!r} supports "
+            "function calling."
+        )
+    if isinstance(exc, APIStatusError):
+        return f"OpenAI returned a server error (HTTP {exc.status_code}). Try again shortly."
+    return f"The OpenAI call failed ({type(exc).__name__}). Try again; check the server logs."
 
 
 class OpenAIClient:
@@ -69,13 +110,24 @@ class OpenAIClient:
                 try:
                     return tool.output.model_validate_json(call.function.arguments)
                 except ValidationError as exc:
-                    raise LLMError(f"Invalid arguments for tool {tool.name}: {exc}") from exc
-        raise LLMError(f"Model did not call tool {tool.name}")
+                    fields = "; ".join(
+                        f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()
+                    )
+                    raise LLMError(
+                        f"The model's arguments for {tool.name} do not match its schema "
+                        f"({fields}). Try again; if it keeps happening, use a stronger model."
+                    ) from exc
+        raise LLMError(
+            f"Model {self._model!r} did not call {tool.name}. Try again; if it keeps happening, "
+            "set LLM_MODEL to a model that supports function calling."
+        )
 
     async def complete(self, *, system: str, messages: list[Message]) -> str:
         text = (await self._chat(system, messages)).content
         if not text:
-            raise LLMError("Model returned an empty response")
+            raise LLMError(
+                "The model returned an empty answer (filtered or cut off). Try again or rephrase."
+            )
         return text
 
     async def _chat(
@@ -94,7 +146,7 @@ class OpenAIClient:
             message: ChatCompletionMessage = response.choices[0].message
             return message
         except (OpenAIError, IndexError, AttributeError, TypeError) as exc:
-            raise LLMError(f"LLM request failed: {exc}") from exc
+            raise LLMError(_explain(exc, self._model)) from exc
 
 
 def build_llm_client(
