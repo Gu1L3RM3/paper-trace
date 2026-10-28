@@ -7,11 +7,12 @@ from dataclasses import dataclass
 import httpx
 import pytest
 import respx
+from openai import AsyncOpenAI
 from pydantic import BaseModel
 
 from papertrace.domain.errors import LLMError
 from papertrace.llm.base import LLMClient, Message, ToolSpec
-from papertrace.llm.http_client import HttpLLMClient
+from papertrace.llm.openai_client import OpenAIClient
 
 
 class Answer(BaseModel):
@@ -40,8 +41,14 @@ def _chat_completion(message: dict[str, object]) -> dict[str, object]:
 
 
 HTTP = Provider(
-    build=lambda client, key: HttpLLMClient(
-        client=client, base_url=BASE_URL, model="m", api_key=key
+    build=lambda client, key: OpenAIClient(
+        client=AsyncOpenAI(
+            api_key=key or "k",
+            base_url=BASE_URL,
+            http_client=client,  # type: ignore[arg-type]
+            max_retries=2,
+        ),
+        model="m",
     ),
     url=f"{BASE_URL}/chat/completions",
     tool_reply=lambda args: _chat_completion(
@@ -143,18 +150,18 @@ async def test_non_json_body_becomes_llm_error(provider: Provider) -> None:
 
 
 @respx.mock
-async def test_api_key_is_optional_and_sent_as_bearer_when_given(provider: Provider) -> None:
+async def test_api_key_is_sent_as_bearer(provider: Provider) -> None:
     route = _mock(provider, 200, provider.text_reply("ok"))
     async with httpx.AsyncClient() as http:
-        await provider.build(http, None).complete(system="s", messages=MESSAGES)
-        assert "authorization" not in route.calls.last.request.headers
         await provider.build(http, "secret").complete(system="s", messages=MESSAGES)
-        assert route.calls.last.request.headers["authorization"] == "Bearer secret"
+    assert route.calls.last.request.headers["authorization"] == "Bearer secret"
 
 
 @pytest.fixture
 def no_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("papertrace.llm.http_client._BACKOFF", 0)
+    monkeypatch.setattr(
+        "openai._base_client.BaseClient._calculate_retry_timeout", lambda *_, **__: 0
+    )
 
 
 @respx.mock
@@ -191,24 +198,9 @@ async def test_client_error_is_not_retried(provider: Provider) -> None:
     assert route.call_count == 1
 
 
-@respx.mock
-async def test_tool_arguments_given_as_object_are_accepted(provider: Provider) -> None:
-    call = {
-        "id": "t1",
-        "type": "function",
-        "function": {"name": "answer", "arguments": {"value": 7}},
-    }
-    _mock(provider, 200, _chat_completion({"role": "assistant", "tool_calls": [call]}))
-    async with httpx.AsyncClient() as http:
-        result = await provider.build(http, None).call_tool(
-            system="s", messages=MESSAGES, tool=TOOL
-        )
-    assert result == Answer(value=7)
-
-
 def test_tool_parameters_drop_keywords_strict_decoders_reject() -> None:
     from papertrace.domain.models import SearchPlan
-    from papertrace.llm.http_client import tool_parameters
+    from papertrace.llm.openai_client import tool_parameters
 
     schema = tool_parameters(SearchPlan)
     text = str(schema)

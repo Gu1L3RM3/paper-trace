@@ -1,31 +1,33 @@
 import asyncio
 
 import httpx
+import pytest
 
-from papertrace.api.dependencies import build_pipeline
-from papertrace.llm.factory import register_llm_provider
+from papertrace.api import dependencies
 from papertrace.settings import Settings
-from tests.fakes import build_fake_llm
 
 
-async def test_all_agents_share_one_semaphore_and_their_own_model() -> None:
-    seen: list[tuple[str, asyncio.Semaphore | None]] = []
+async def test_all_agents_share_one_semaphore_and_their_own_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: list[tuple[str | None, asyncio.Semaphore | None]] = []
 
-    def recording(settings: Settings, model: str, semaphore: asyncio.Semaphore | None) -> object:
+    def recording(
+        settings: Settings, *, model: str | None = None, semaphore: asyncio.Semaphore | None = None
+    ) -> object:
         seen.append((model, semaphore))
-        return build_fake_llm(settings, model, semaphore)
+        return object()
 
-    register_llm_provider("recording", recording)  # type: ignore[arg-type]
+    monkeypatch.setattr(dependencies, "build_llm_client", recording)
     settings = Settings(
         _env_file=None,
-        llm_provider="recording",
+        llm_api_key="k",
         llm_model="base",
-        llm_base_url="http://x",
         synthesis_model="big",
     )
 
     async with httpx.AsyncClient() as http:
-        build_pipeline(settings, http)
+        dependencies.build_pipeline(settings, http)
 
     assert [model for model, _ in seen] == ["base", "big", "big"]
     assert seen[0][1] is not None and all(sem is seen[0][1] for _, sem in seen)

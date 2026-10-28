@@ -44,13 +44,6 @@ class FakePaperSource:
         return result
 
 
-def build_fake_llm(
-    settings: object, model: str, semaphore: asyncio.Semaphore | None
-) -> FakeLLMClient:
-    """Plugin entry point used to prove providers can live outside the package."""
-    return FakeLLMClient(ResearchQuestion(text="x"), text=f"model={model}")
-
-
 class FakeVerifier:
     async def verify(
         self, question: ResearchQuestion, synthesis: "SynthesisResult", papers: list[Paper]

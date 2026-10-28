@@ -30,10 +30,9 @@ from papertrace.agents.verification import VerificationAgent
 from papertrace.domain.models import Paper, ResearchQuestion, SynthesisResult
 from papertrace.domain.papers import surname
 from papertrace.domain.verification import VerificationResult
-from papertrace.llm import http_client
+from papertrace.llm import openai_client
 from papertrace.llm.base import LLMClient, ToolSpec
-from papertrace.llm.factory import build_llm_client
-from papertrace.llm.http_client import tool_parameters
+from papertrace.llm.openai_client import build_llm_client, tool_parameters
 from papertrace.settings import Settings
 from papertrace.sources.openalex import _to_paper
 
@@ -201,9 +200,9 @@ def lint_prompt(name: str, text: str, *, needs_untrusted: bool) -> Component:
 
 
 def lint_client() -> Component:
-    src = inspect.getsource(http_client)
+    src = inspect.getsource(openai_client)
     return Component(
-        "HttpLLMClient request",
+        "OpenAIClient request",
         [
             Check(
                 "sends a schema without keywords strict decoders reject",

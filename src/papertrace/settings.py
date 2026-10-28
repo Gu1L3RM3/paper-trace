@@ -8,11 +8,10 @@ class Settings(BaseSettings):
     # The example env file ships empty values; treat them as unset.
     model_config = SettingsConfigDict(env_file=".env", env_ignore_empty=True, extra="ignore")
 
-    # Built-in name or "package.module:function" for a custom provider (see llm/factory.py).
-    llm_provider: str = "chat_completions"
-    llm_api_key: SecretStr | None = None
+    llm_api_key: SecretStr
     llm_model: str
-    llm_base_url: str
+    # Only for an OpenAI-compatible gateway or proxy; None means the OpenAI API.
+    llm_base_url: str | None = None
     orchestrator_model: str | None = None
     synthesis_model: str | None = None
     verification_model: str | None = None

@@ -199,7 +199,10 @@ def test_verification_model_override_and_fallback() -> None:
     from papertrace.settings import Settings
 
     settings = Settings(
-        _env_file=None, llm_base_url="http://x", llm_model="base", synthesis_model="synthesis"
+        _env_file=None,
+        llm_api_key="k",
+        llm_model="base",
+        synthesis_model="synthesis",
     )
     assert settings.model_for("verification") == "synthesis"
     settings.verification_model = "verifier"

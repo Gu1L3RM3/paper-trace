@@ -35,7 +35,7 @@ def test_blank_author_name_does_not_crash() -> None:
 def test_missing_configuration_prints_friendly_error(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
 ) -> None:
-    for var in ("LLM_MODEL", "LLM_PROVIDER", "LLM_API_KEY"):
+    for var in ("LLM_MODEL", "LLM_API_KEY"):
         monkeypatch.delenv(var, raising=False)
     monkeypatch.chdir(tmp_path)  # no env file to pick up
     monkeypatch.setattr(sys, "argv", ["papertrace", "question"])

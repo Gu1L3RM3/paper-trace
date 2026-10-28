@@ -28,7 +28,7 @@ uv run uvicorn papertrace.api.app:app --reload
 ## Layout
 
 - `src/papertrace/domain/` — Pydantic models, pure functions. No I/O.
-- `src/papertrace/llm/` — `LLMClient` port, generic `HttpLLMClient`, factory.
+- `src/papertrace/llm/` — `LLMClient` port, `OpenAIClient` (official OpenAI SDK), builder.
 - `src/papertrace/sources/` — `PaperSource` port, `OpenAlexSource`.
 - `src/papertrace/agents/` — Orchestrator, Research, Synthesis, Verification (ports only).
 - `src/papertrace/pipeline.py` — runs the stages, yields `StageEvent`s.
@@ -46,13 +46,13 @@ uv run uvicorn papertrace.api.app:app --reload
 
 When proposing or reviewing code, name the principle a design choice serves if it is not obvious.
 
-## LLM provider independence
+## LLM provider (OpenAI only)
 
-- No vendor SDK is a dependency: the built-in `HttpLLMClient` speaks chat/completions over
-  `httpx`. Other APIs plug in as a new `LLMClient` class under `llm/` or an external
-  `LLM_PROVIDER=package.module:function`.
-- Switching endpoint/model is a `.env` change: `LLM_BASE_URL`, `LLM_MODEL`, optional
-  `LLM_API_KEY`, `LLM_PROVIDER`, optional `ORCHESTRATOR_MODEL` / `SYNTHESIS_MODEL`, `LLM_MAX_CONCURRENCY`.
+- The only provider is OpenAI, through the official `openai` SDK (`llm/openai_client.py`). Agents
+  still depend on the `LLMClient` port, never on the SDK, which is the sole vendor dependency.
+- Switching model is a `.env` change: `LLM_API_KEY`, `LLM_MODEL`, optional `ORCHESTRATOR_MODEL` /
+  `SYNTHESIS_MODEL` / `VERIFICATION_MODEL`, `LLM_MAX_CONCURRENCY`. `LLM_BASE_URL` is only for an
+  OpenAI-compatible gateway.
 - Structured output always via forced tool calling into a Pydantic model.
 - Parallel work: `asyncio.gather` over real async I/O, bounded by the shared semaphore.
 - Read settings through `pydantic-settings`, never `os.environ`.

@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from papertrace.agents import orchestrator, synthesis, verification
 from papertrace.domain.verification import VerificationReport
 from papertrace.llm.base import ToolSpec
-from papertrace.llm.http_client import tool_parameters
+from papertrace.llm.openai_client import tool_parameters
 
 TOOLS = [orchestrator._TOOL, verification._TOOL]
 PROMPTS = [orchestrator._SYSTEM, synthesis._SYSTEM, synthesis._REVISE_SYSTEM, verification._SYSTEM]

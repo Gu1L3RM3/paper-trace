@@ -73,7 +73,7 @@ flowchart TD
     O --> L[LLMClient port]
     S --> L
     V --> L
-    L --> H[HttpLLMClient or custom adapter]
+    L --> H[OpenAIClient]
     H --> Provider[Configured model API]
     R --> P[PaperSource port]
     P --> OA[OpenAlexSource]
@@ -163,7 +163,7 @@ is false. The verifier cannot prove truth or independently inspect full text.
 ```text
 src/papertrace/
   domain/      Models and pure validation/dedup/citation/abstract functions; no I/O.
-  llm/         LLMClient port, HTTP adapter and provider factory.
+  llm/         LLMClient port and OpenAI adapter.
   sources/     PaperSource port and OpenAlex adapter.
   agents/      Orchestrator, Research, Synthesis and Verification.
   pipeline.py  Stage protocols, coordination and typed StageEvents.
@@ -177,32 +177,29 @@ tests/
 The backend and retrieval CLI exist. The vanilla JS frontend (`web/static/`) and the `papertrace`
 server command remain Stage 3 work; the current server command is `uv run uvicorn papertrace.api.app:app`.
 
-## 5. LLM provider independence
+## 5. LLM provider (OpenAI only)
 
-The project must run on any LLM that supports tool calling, and switching provider must be a `.env` change.
+The project uses OpenAI through the official `openai` SDK; switching model is a `.env` change.
 
 - `LLMClient` is a small async protocol:
   - `call_tool(system, messages, tool: ToolSpec[T]) -> T` — forced tool call, output validated into a Pydantic model.
   - `complete(system, messages) -> str` — free text.
-- `HttpLLMClient` is the built-in adapter: plain `httpx` against any chat/completions endpoint
-  with function calling (Ollama, vLLM, LM Studio, OpenRouter, Groq, gateways, hosted APIs).
-  No vendor SDK is a dependency. APIs with another protocol plug in as a new `LLMClient`
-  class, registered by name or loaded from `LLM_PROVIDER=package.module:function`.
-- `build_llm_client(settings)` picks the adapter from `LLM_PROVIDER`.
+- `OpenAIClient` wraps `AsyncOpenAI` (chat completions, forced function call); the SDK retries
+  transient failures. Agents see only the port, so another vendor would be a new `LLMClient` class.
+- `build_llm_client(settings, model=...)` builds one client per agent.
 - Each agent can use a different model (`ORCHESTRATOR_MODEL`, `SYNTHESIS_MODEL` override `LLM_MODEL`;
   `VERIFICATION_MODEL` falls back to the effective synthesis model).
-- All adapters pass the same contract test suite (Liskov substitution, proven by tests).
+- Every `LLMClient` implementation must pass the contract suite in `tests/contract/`.
 - Calls use async I/O. `LLM_MAX_CONCURRENCY` (an `asyncio.Semaphore`) caps concurrent LLM
   requests within one application instance; it does not make dependent stages parallel.
 
-### Environment variables (generic names on purpose)
+### Environment variables
 
 | Variable | Example | Purpose |
 |---|---|---|
-| `LLM_PROVIDER` | `chat_completions` (default) / `pkg.mod:fn` | Selects the adapter |
-| `LLM_API_KEY` | — | Optional bearer key |
-| `LLM_MODEL` | the name your server expects | Default model for all agents (required) |
-| `LLM_BASE_URL` | `http://localhost:11434/v1` | Chat/completions endpoint (required) |
+| `LLM_API_KEY` | — | OpenAI API key (required) |
+| `LLM_MODEL` | an OpenAI model name | Default model for all agents (required) |
+| `LLM_BASE_URL` | — | Optional: OpenAI-compatible gateway instead of api.openai.com |
 | `ORCHESTRATOR_MODEL`, `SYNTHESIS_MODEL`, `VERIFICATION_MODEL` | — | Optional per-agent overrides |
 | `LLM_MAX_CONCURRENCY` | `4` | Parallel LLM calls cap |
 | `OPENALEX_MAILTO` | `you@example.com` | OpenAlex polite pool |
@@ -235,7 +232,7 @@ merged through a PR with green CI. `main` is protected.
 ## 7. Stack
 
 Python 3.12, uv, FastAPI, Uvicorn, httpx (async), Pydantic v2, pydantic-settings, sse-starlette,
-no LLM vendor SDK. Tests: pytest, pytest-asyncio, pytest-cov, respx. Quality: ruff, mypy, pre-commit.
+the official `openai` SDK. Tests: pytest, pytest-asyncio, pytest-cov, respx. Quality: ruff, mypy, pre-commit.
 Planned frontend: vanilla HTML/CSS/JS served by FastAPI, no framework or build step.
 
 ## 8. Frontend direction

@@ -29,7 +29,7 @@ uv run uvicorn papertrace.api.app:app --reload
 ```
 src/papertrace/
   domain/      Pydantic models + pure functions. No I/O, no SDK imports.
-  llm/         LLMClient port, provider adapters, factory.
+  llm/         LLMClient port, OpenAIClient (openai SDK), builder.
   sources/     PaperSource port, OpenAlex adapter.
   agents/      Orchestrator, Research, Synthesis, Verification. Depend on ports only.
   pipeline.py  Coordinates 4 agents and one revision maximum; yields typed StageEvents.
@@ -55,7 +55,7 @@ tests/
   only in `api/dependencies.py` (and the CLI entry point). No module-level clients.
 
 Additional rules:
-- No vendor SDK is a dependency; LLM access goes through the `LLMClient` port (`llm/`).
+- The `openai` SDK is the only LLM dependency; access goes through the `LLMClient` port (`llm/`).
 - Agent contracts are Pydantic models. No `dict[str, Any]` crossing module boundaries.
 - Concurrency uses `asyncio.gather` over real async I/O; LLM calls go through the shared
   `LLM_MAX_CONCURRENCY` semaphore.
@@ -63,8 +63,7 @@ Additional rules:
 
 ## Environment
 
-Generic, provider-agnostic variables (see `.env.example`):
-`LLM_BASE_URL`, `LLM_MODEL`, optional `LLM_API_KEY`, `LLM_PROVIDER`,
+Variables (see `.env.example`): `LLM_API_KEY`, `LLM_MODEL`, optional `LLM_BASE_URL`,
 `ORCHESTRATOR_MODEL`, `SYNTHESIS_MODEL`, `VERIFICATION_MODEL`, `LLM_MAX_CONCURRENCY`,
 `OPENALEX_MAILTO`.
 Never commit `.env`. Never print or log keys.
