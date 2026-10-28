@@ -55,7 +55,7 @@ tests/
   only in `api/dependencies.py` (and the CLI entry point). No module-level clients.
 
 Additional rules:
-- Vendor SDKs (`anthropic`, `openai`) are imported only inside their adapter module in `llm/`.
+- No vendor SDK is a dependency; LLM access goes through the `LLMClient` port (`llm/`).
 - Agent contracts are Pydantic models. No `dict[str, Any]` crossing module boundaries.
 - Concurrency uses `asyncio.gather` over real async I/O; LLM calls go through the shared
   `LLM_MAX_CONCURRENCY` semaphore.
@@ -64,7 +64,7 @@ Additional rules:
 ## Environment
 
 Generic, provider-agnostic variables (see `.env.example`):
-`LLM_PROVIDER` (`anthropic` | `openai_compatible`), `LLM_API_KEY`, `LLM_MODEL`, `LLM_BASE_URL`,
+`LLM_BASE_URL`, `LLM_MODEL`, optional `LLM_API_KEY`, `LLM_PROVIDER`,
 `ORCHESTRATOR_MODEL`, `SYNTHESIS_MODEL`, `LLM_MAX_CONCURRENCY`, `OPENALEX_MAILTO`.
 Never commit `.env`. Never print or log keys.
 

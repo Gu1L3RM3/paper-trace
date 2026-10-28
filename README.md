@@ -22,8 +22,9 @@ uv run python -m papertrace.cli "O jejum intermitente melhora a memória?"
 ```
 
 Plans 2–4 English queries with the configured LLM, searches OpenAlex in parallel and prints the
-deduplicated papers. Switch provider by editing `LLM_PROVIDER`, `LLM_API_KEY`, `LLM_MODEL` (and
-`LLM_BASE_URL` for OpenAI-compatible endpoints) in the env file; no code changes.
+deduplicated papers. Point it at any server that speaks the chat/completions protocol with function calling
+(Ollama, vLLM, LM Studio, OpenRouter, Groq, a gateway, a hosted API) by setting `LLM_BASE_URL`
+and `LLM_MODEL` in the env file. `LLM_API_KEY` is optional; no code changes, no vendor SDK.
 
 Real-API tests are opt-in: `uv run pytest -m live`.
 
@@ -37,5 +38,5 @@ agents or existing adapters:
   semaphore)` returns your client.
 - Or register it in code: `register_llm_provider("name", build)` from `papertrace.llm.factory`.
 
-`openai_compatible` already covers OpenAI, OpenRouter, Groq, Ollama and vLLM via `LLM_BASE_URL`;
-`LLM_API_KEY` is optional for keyless local servers.
+The built-in `chat_completions` provider needs only `LLM_BASE_URL` and `LLM_MODEL`; `LLM_API_KEY`
+is optional for keyless local servers.
