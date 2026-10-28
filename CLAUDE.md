@@ -9,7 +9,7 @@ Research assistant: question (PT/EN) → Orchestrator plans 2–4 English querie
 → Research Agent searches OpenAlex in parallel and dedups by DOI → Synthesis Agent writes Markdown
 citing only retrieved papers as (Author, Year) → Verification Agent assesses abstract support.
 The pipeline streams the draft, coordinates one revision maximum and re-verifies it.
-The vanilla JS UI is planned. Never invent papers, authors, DOIs or findings.
+Vanilla JS UI in `web/static/`. Never invent papers, authors, DOIs or findings.
 
 ## Commands
 
@@ -22,7 +22,8 @@ uv run ruff check --fix . && uv run ruff format .
 uv run mypy
 uv run pre-commit run --all-files
 uv run python tools/prompt_eval/run.py --out report.html   # prompt/tool/schema lint + 12 live cases
-uv run uvicorn papertrace.api.app:app --reload
+uv run papertrace                  # serves API + UI on 127.0.0.1:8000
+uv run uvicorn papertrace.api.app:app --reload   # dev server with reload
 ```
 
 ## Layout
@@ -31,9 +32,10 @@ uv run uvicorn papertrace.api.app:app --reload
 - `src/papertrace/llm/` — `LLMClient` port, `OpenAIClient` (official OpenAI SDK), builder.
 - `src/papertrace/sources/` — `PaperSource` port, `OpenAlexSource`.
 - `src/papertrace/agents/` — Orchestrator, Research, Synthesis, Verification (ports only).
+- `src/papertrace/server.py` — `papertrace` console script, checks settings before starting.
 - `src/papertrace/pipeline.py` — runs the stages, yields `StageEvent`s.
 - `src/papertrace/api/` — FastAPI, SSE, `dependencies.py` = composition root.
-- `src/papertrace/web/static/` — planned frontend.
+- `src/papertrace/web/static/` — vanilla frontend (`index.html`, `app.css`, `app.js`), mounted last in `api/app.py`.
 - `tests/{unit,contract,integration}/`, fakes in `tests/fakes.py`, recorded fixtures in `tests/fixtures/`.
 
 ## SOLID — apply explicitly

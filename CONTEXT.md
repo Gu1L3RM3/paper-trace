@@ -180,8 +180,8 @@ tests/
   integration/ API/SSE tests; real API tests are opt-in.
 ```
 
-The backend and retrieval CLI exist. The vanilla JS frontend (`web/static/`) and the `papertrace`
-server command remain Stage 3 work; the current server command is `uv run uvicorn papertrace.api.app:app`.
+The backend, retrieval CLI, vanilla JS frontend (`web/static/`) and the `papertrace` server command
+(`uv run papertrace`) exist. `uv run uvicorn papertrace.api.app:app --reload` remains for development.
 
 ## 5. LLM provider (OpenAI only)
 
@@ -239,14 +239,14 @@ merged through a PR with green CI. `main` is protected.
 
 Python 3.12, uv, FastAPI, Uvicorn, httpx (async), Pydantic v2, pydantic-settings, sse-starlette,
 the official `openai` SDK. Tests: pytest, pytest-asyncio, pytest-cov, respx. Quality: ruff, mypy, pre-commit.
-Planned frontend: vanilla HTML/CSS/JS served by FastAPI, no framework or build step.
+Frontend: vanilla HTML/CSS/JS served by FastAPI, no framework or build step.
 
 ## 8. Frontend direction
 
 A distinctive visual identity drawn from the domain: academic research, citations, traceability.
 Think library catalog cards, footnotes, citation trails, the margin notes of a paper. Avoid generic SaaS
 looks: no identical rounded cards, no decorative gradients, no cream+terracotta "AI" palette.
-The planned UI shows plan, papers, draft synthesis and verification as SSE events arrive, and replaces the draft when a `revision: true` synthesis arrives.
+The UI shows plan, papers, draft synthesis and verification as SSE events arrive, and replaces the draft when a `revision: true` synthesis arrives.
 Every citation in the synthesis links to the paper it came from. The `frontend-design` skill is used
 before any CSS is written.
 

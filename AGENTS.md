@@ -21,6 +21,7 @@ uv run pytest --cov                      # coverage, must stay ≥85%
 uv run ruff check . && uv run ruff format --check .
 uv run mypy
 uv run pre-commit run --all-files        # all hooks
+uv run papertrace                        # API + UI on 127.0.0.1:8000
 uv run uvicorn papertrace.api.app:app --reload
 ```
 
@@ -34,7 +35,7 @@ src/papertrace/
   agents/      Orchestrator, Research, Synthesis, Verification. Depend on ports only.
   pipeline.py  Coordinates 4 agents and one revision maximum; yields typed StageEvents.
   api/         FastAPI app, routes, SSE, dependencies.py (composition root).
-  web/static/  Planned frontend: index.html, styles.css, app.js (no build).
+  web/static/  Frontend: index.html, app.css, app.js (no build), mounted last so it never shadows API routes.
 tests/
   unit/  contract/  integration/
 ```
