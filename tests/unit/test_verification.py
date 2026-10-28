@@ -274,3 +274,22 @@ def test_revision_is_needed_only_for_problems_a_rewrite_can_fix() -> None:
     ).needs_revision
     flagged = synthesis.model_copy(update={"unmatched_citations": ["Ghost, 1900"]})
     assert validate_report(clean, flagged, ps).needs_revision
+
+
+async def test_prompts_carry_only_the_fields_the_agents_need() -> None:
+    from papertrace.agents.synthesis import SynthesisAgent
+    from papertrace.domain.verification import VerificationResult
+
+    paper = next(p for p in papers() if p.abstract and p.url)
+    synthesis = SynthesisResult(
+        markdown="Draft", unmatched_citations=[], insufficient_evidence=False
+    )
+    llm = FakeLLMClient(VerificationReport(claims=[], findings=[]), text="Revised")
+    await VerificationAgent(llm).verify(ResearchQuestion(text="q"), synthesis, [paper])
+    report = VerificationResult(claims=[], findings=[], status="issues_found", reason="r")
+    await SynthesisAgent(llm).revise(ResearchQuestion(text="q"), [paper], synthesis, report)
+    for _, messages, *_ in llm.calls:
+        content = messages[0].content
+        assert paper.url not in content
+        assert "insufficient_evidence" not in content
+        assert paper.title in content

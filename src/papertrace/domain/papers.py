@@ -38,3 +38,14 @@ def surname(author: str) -> str:
     while len(words) > 1 and words[-1].rstrip(".").casefold() in _NAME_SUFFIXES:
         words.pop()
     return words[-1] if words else ""
+
+
+def prompt_view(index: int, paper: Paper) -> dict[str, object]:
+    """The only fields a model needs about a paper; ids and URLs would just cost tokens."""
+    return {
+        "index": index,
+        "title": paper.title,
+        "authors": paper.authors,
+        "year": paper.year,
+        "abstract": paper.abstract,
+    }
