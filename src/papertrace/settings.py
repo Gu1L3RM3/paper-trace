@@ -8,8 +8,9 @@ class Settings(BaseSettings):
     # The example env file ships empty values; treat them as unset.
     model_config = SettingsConfigDict(env_file=".env", env_ignore_empty=True, extra="ignore")
 
-    llm_provider: Literal["anthropic", "openai_compatible"] = "anthropic"
-    llm_api_key: SecretStr
+    # Built-in name or "package.module:function" for a custom provider (see llm/factory.py).
+    llm_provider: str = "anthropic"
+    llm_api_key: SecretStr | None = None
     llm_model: str
     llm_base_url: str | None = None
     orchestrator_model: str | None = None

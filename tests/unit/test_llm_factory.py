@@ -1,9 +1,16 @@
 import pytest
+from pydantic import BaseModel
 
+from papertrace.domain.errors import LLMError
 from papertrace.llm.anthropic_client import AnthropicClient
-from papertrace.llm.factory import build_llm_client
+from papertrace.llm.factory import build_llm_client, register_llm_provider
 from papertrace.llm.openai_compatible import OpenAICompatibleClient
 from papertrace.settings import Settings
+from tests.fakes import FakeLLMClient
+
+
+class Answer(BaseModel):
+    pass
 
 
 def _settings(**overrides: object) -> Settings:
@@ -31,3 +38,29 @@ def test_per_agent_model_overrides_default() -> None:
     settings = _settings(orchestrator_model="small")
     assert settings.model_for("orchestrator") == "small"
     assert settings.model_for("synthesis") == "m"
+
+
+async def test_provider_can_be_a_dotted_path_outside_the_package() -> None:
+    settings = _settings(llm_provider="tests.fakes:build_fake_llm")
+    client = build_llm_client(settings, model="custom")
+    assert await client.complete(system="s", messages=[]) == "model=custom"
+
+
+def test_registered_provider_is_selectable_by_name() -> None:
+    register_llm_provider("mine", lambda settings, model, semaphore: FakeLLMClient(Answer(), "x"))
+    assert isinstance(build_llm_client(_settings(llm_provider="mine")), FakeLLMClient)
+
+
+def test_unknown_provider_lists_the_available_ones() -> None:
+    with pytest.raises(LLMError, match="anthropic"):
+        build_llm_client(_settings(llm_provider="nope"))
+
+
+def test_api_key_is_optional_for_keyless_local_endpoints() -> None:
+    settings = Settings(
+        _env_file=None,
+        llm_provider="openai_compatible",
+        llm_model="llama3",
+        llm_base_url="http://localhost:11434/v1",
+    )
+    assert isinstance(build_llm_client(settings), OpenAICompatibleClient)
