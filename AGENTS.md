@@ -1,13 +1,13 @@
 # AGENTS.md — PaperTrace AI
 
 Instructions for any coding agent working in this repository (Codex, Claude Code, Cursor, others).
-Read `CONTEXT.md` (what and why) and `PLAN.md` (current stage and its "Done when") before changing code.
+Read `README.md` (what, why and architecture) before changing code.
 
 ## Project in one paragraph
 
 PaperTrace AI answers research questions (PT or EN) with a grounded synthesis of real academic papers.
 Four agents: Orchestrator (question → 2–4 English search queries via forced tool call),
-Research Agent (parallel OpenAlex search + DOI dedup), Synthesis Agent (Markdown with (Author, Year)
+Research Agent (parallel OpenAlex and Semantic Scholar search + DOI dedup), Synthesis Agent (Markdown with (Author, Year)
 citations from the retrieved list only), and Verification Agent (abstract support, one bounded revision). FastAPI streams each stage over SSE to a vanilla JS frontend.
 The app is in English. It must never invent papers, authors, DOIs or findings.
 
@@ -31,7 +31,7 @@ uv run uvicorn papertrace.api.app:app --reload
 src/papertrace/
   domain/      Pydantic models + pure functions. No I/O, no SDK imports.
   llm/         LLMClient port, OpenAIClient (openai SDK), builder.
-  sources/     PaperSource port, OpenAlex adapter.
+  sources/     PaperSource port, OpenAlex and Semantic Scholar adapters.
   agents/      Orchestrator, Research, Synthesis, Verification. Depend on ports only.
   pipeline.py  Coordinates 4 agents and one revision maximum; yields typed StageEvents.
   api/         FastAPI app, routes, SSE, dependencies.py (composition root).
@@ -99,8 +99,8 @@ Testing rules:
 
 ## Scope guard (v1)
 
-Do not add, without explicit approval: data sources besides OpenAlex, full-text verification,
-persistence, auth, deploy configuration, frontend frameworks or build steps. Propose them as v2.
+Do not add, without explicit approval: data sources besides OpenAlex and Semantic Scholar,
+full-text verification, persistence, auth, deploy configuration, frontend frameworks or build steps. Propose them as v2.
 
 ## Git and commits
 
@@ -132,7 +132,7 @@ persistence, auth, deploy configuration, frontend frameworks or build steps. Pro
 
 ## Frontend
 
-Vanilla HTML/CSS/JS in `web/static/`. Distinctive academic/traceability identity (see `CONTEXT.md` §8).
+Vanilla HTML/CSS/JS in `web/static/`. Distinctive academic/traceability identity.
 No generic SaaS look, no decorative gradients. Stream rendering per SSE event type; citations link to
 DOI/URL. Accessible: semantic HTML, keyboard-usable, visible focus, works at phone width.
 
@@ -140,5 +140,4 @@ DOI/URL. Accessible: semantic HTML, keyboard-usable, visible focus, works at pho
 
 - Tests written first and passing; coverage ≥85%.
 - `uv run pre-commit run --all-files` clean.
-- Docs updated when behavior, commands or env vars change (`README.md`, `CONTEXT.md`, `PLAN.md`).
-- The "Done when" checklist in `PLAN.md` updated if a stage criterion was met.
+- Docs updated when behavior, commands or env vars change (`README.md`).

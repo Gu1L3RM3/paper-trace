@@ -1,7 +1,6 @@
 # CLAUDE.md — PaperTrace AI
 
-Guidance for Claude Code in this repository. Product context is in `CONTEXT.md`; the staged plan
-with outcomes and "Done when" checklists is in `PLAN.md`. Read the current stage before coding.
+Guidance for Claude Code in this repository. Product context and design are in `README.md`.
 
 ## What this is
 
@@ -87,9 +86,9 @@ When proposing or reviewing code, name the principle a design choice serves if i
 
 ## Scope (v1)
 
-OpenAlex and abstract-only verification only. No full-text verification, persistence, auth, deploy,
-or frontend framework. `VERIFICATION_MODEL` defaults to the effective synthesis model.
-Ask before expanding scope; propose extras as v2 in `CONTEXT.md` §11.
+OpenAlex, Semantic Scholar and abstract-only verification only. No full-text verification,
+persistence, auth, deploy, or frontend framework. `VERIFICATION_MODEL` defaults to the effective synthesis model.
+Ask before expanding scope; propose extras as v2 in the README roadmap.
 
 ## Commits and branches
 
@@ -121,7 +120,7 @@ Ask before expanding scope; propose extras as v2 in `CONTEXT.md` §11.
 
 ## Frontend
 
-Use the `frontend-design` skill before writing CSS. Academic/traceability identity (`CONTEXT.md` §8):
+Use the `frontend-design` skill before writing CSS. Academic/traceability identity:
 no generic SaaS cards, no decorative gradients, no cream+terracotta palette. Render each SSE event
 as it arrives; link every citation to its DOI/URL. Semantic, keyboard-usable, phone-width friendly.
 
@@ -133,4 +132,4 @@ update its status there and run `pgui sync`.
 ## Done means
 
 Tests first and green, coverage ≥85%, pre-commit clean, docs updated if commands/env/behavior
-changed, and the matching `PLAN.md` "Done when" box checked only when verifiably true.
+changed.
