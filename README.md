@@ -3,8 +3,21 @@
 Multi-agent research assistant: ask a question, get a synthesis that cites only the academic papers
 it actually retrieved from OpenAlex.
 
-> Work in progress. See [`PLAN.md`](PLAN.md) for the staged roadmap and [`CONTEXT.md`](CONTEXT.md)
-> for the full project context.
+See [`PLAN.md`](PLAN.md) for the staged roadmap and [`CONTEXT.md`](CONTEXT.md) for the full
+project context.
+
+## Run it
+
+```bash
+uv sync
+cp .env.example .env   # set LLM_API_KEY and LLM_MODEL
+uv run papertrace      # http://127.0.0.1:8000
+```
+
+Open the page, ask a question, and watch the plan, papers, draft synthesis and verification appear
+as the server streams them. Citations link to the reference list, and each reference links to its
+DOI. A revised synthesis replaces the draft. Missing configuration stops the command at startup
+with the names of the variables to set.
 
 ## Quick start (development)
 
@@ -69,7 +82,7 @@ The built-in LLM adapter retries transport failures and HTTP 429/500/502/503/504
 attempts, with 1s and 2s backoff. Invalid credentials, invalid tool output and fabricated report
 provenance do not trigger these retries. OpenAlex has no explicit retry loop.
 
-The backend and retrieval CLI exist; the vanilla JS frontend remains planned work.
+The vanilla JS frontend (`src/papertrace/web/static/`) consumes the same SSE stream.
 See [architecture, contracts and failure matrix](CONTEXT.md#4-architecture) for details.
 
 ## LLM provider
