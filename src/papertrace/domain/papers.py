@@ -26,3 +26,8 @@ def dedup_papers(papers: list[Paper]) -> list[Paper]:
     for paper in papers:
         seen.setdefault(_key(paper), paper)
     return list(seen.values())
+
+
+def surname(author: str) -> str:
+    words = author.split()
+    return words[-1] if words else ""

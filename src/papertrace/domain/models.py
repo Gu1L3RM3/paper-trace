@@ -41,3 +41,10 @@ class ResearchResult(BaseModel):
     papers: list[Paper]
     # Queries whose search failed, so callers can tell a narrowed result from a complete one.
     failed_queries: list[str]
+
+
+class SynthesisResult(BaseModel):
+    markdown: str
+    # Citations in the text that no retrieved paper backs (see domain/citations.py).
+    unmatched_citations: list[str]
+    insufficient_evidence: bool
