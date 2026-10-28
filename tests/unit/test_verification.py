@@ -1,7 +1,7 @@
 import pytest
 
 from papertrace.agents.verification import VerificationAgent
-from papertrace.domain.errors import LLMError
+from papertrace.domain.errors import InvalidReportError
 from papertrace.domain.models import ResearchQuestion, SynthesisResult
 from papertrace.domain.verification import ClaimAssessment, EvidenceReference, VerificationReport
 from tests.fakes import FakeLLMClient, papers
@@ -34,7 +34,7 @@ async def test_verification_validates_real_evidence_and_prompt() -> None:
 
 
 @pytest.mark.parametrize("index,quote", [(99, "x"), (1, "fabricated evidence")])
-async def test_invalid_evidence_is_an_llm_error(index: int, quote: str) -> None:
+async def test_invalid_evidence_degrades_to_not_verifiable(index: int, quote: str) -> None:
     paper = next(p for p in papers() if p.abstract)
     report = VerificationReport(
         claims=[
@@ -47,12 +47,30 @@ async def test_invalid_evidence_is_an_llm_error(index: int, quote: str) -> None:
         ],
         findings=[],
     )
-    with pytest.raises(LLMError, match=r"unknown paper|absent from the abstract"):
-        await VerificationAgent(FakeLLMClient(report)).verify(
-            ResearchQuestion(text="q"),
-            SynthesisResult(markdown="claim", unmatched_citations=[], insufficient_evidence=False),
-            [paper],
-        )
+    result = await VerificationAgent(FakeLLMClient(report)).verify(
+        ResearchQuestion(text="q"),
+        SynthesisResult(markdown="claim", unmatched_citations=[], insufficient_evidence=False),
+        [paper],
+    )
+    assert result.status == "not_verifiable"
+    assert "validation" in result.reason
+
+
+def test_quote_and_claim_matching_ignores_case() -> None:
+    from papertrace.domain.verification import validate_report
+
+    paper = next(p for p in papers() if p.abstract)
+    assert paper.abstract
+    text = f"{paper.abstract} ({paper.authors[0].split()[-1]}, {paper.year})"
+    claim = ClaimAssessment(
+        text=text.upper(),
+        assessment="supported",
+        reason="r",
+        evidence=[EvidenceReference(paper_index=1, quote=paper.abstract.lower())],
+    )
+    synthesis = SynthesisResult(markdown=text, unmatched_citations=[], insufficient_evidence=False)
+    report = VerificationReport(claims=[claim], findings=[])
+    assert validate_report(report, synthesis, [paper]).status == "no_issues_found"
 
 
 async def test_empty_evidence_skips_llm() -> None:
@@ -111,7 +129,7 @@ def test_report_validation_boundaries() -> None:
         claim.model_copy(update={"evidence": [ref.model_copy(update={"paper_index": 2})]}),
         claim.model_copy(update={"assessment": "contradicted", "evidence": []}),
     ]:
-        with pytest.raises(LLMError):
+        with pytest.raises(InvalidReportError):
             validate_report(
                 VerificationReport(claims=[invalid], findings=[]),
                 synthesis,
@@ -126,7 +144,7 @@ def test_report_validation_boundaries() -> None:
         ).status
         == "issues_found"
     )
-    with pytest.raises(LLMError):
+    with pytest.raises(InvalidReportError):
         validate_report(
             VerificationReport(
                 claims=[claim], findings=[finding.model_copy(update={"evidence": []})]
