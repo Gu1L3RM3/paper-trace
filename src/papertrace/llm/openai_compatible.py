@@ -7,6 +7,7 @@ from openai.types.chat import (
     ChatCompletion,
     ChatCompletionAssistantMessageParam,
     ChatCompletionFunctionToolParam,
+    ChatCompletionMessage,
     ChatCompletionMessageParam,
     ChatCompletionNamedToolChoiceParam,
     ChatCompletionUserMessageParam,
@@ -47,7 +48,7 @@ class OpenAICompatibleClient:
             "function": {"name": tool.name},
         }
         response = await self._create(system, messages, tools=[spec], tool_choice=choice)
-        for call in response.choices[0].message.tool_calls or []:
+        for call in self._message(response).tool_calls or []:
             if call.type == "function" and call.function.name == tool.name:
                 try:
                     return tool.output.model_validate(json.loads(call.function.arguments))
@@ -57,7 +58,16 @@ class OpenAICompatibleClient:
 
     async def complete(self, *, system: str, messages: list[Message]) -> str:
         response = await self._create(system, messages)
-        return response.choices[0].message.content or ""
+        text = self._message(response).content
+        if not text:
+            raise LLMError("Model returned an empty response")
+        return text
+
+    @staticmethod
+    def _message(response: ChatCompletion) -> ChatCompletionMessage:
+        if not response.choices:
+            raise LLMError("Model returned no choices")
+        return response.choices[0].message
 
     async def _create(
         self,

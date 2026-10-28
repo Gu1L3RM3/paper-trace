@@ -49,7 +49,10 @@ class AnthropicClient:
 
     async def complete(self, *, system: str, messages: list[Message]) -> str:
         response = await self._create(system, messages)
-        return "".join(block.text for block in response.content if block.type == "text")
+        text = "".join(block.text for block in response.content if block.type == "text")
+        if not text:
+            raise LLMError("Model returned an empty response")
+        return text
 
     async def _create(
         self,
