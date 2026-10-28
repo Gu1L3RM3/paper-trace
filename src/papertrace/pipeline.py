@@ -78,14 +78,15 @@ class Pipeline:
                 raise SourceError(f"Search failed for: {', '.join(result.failed_queries)}")
             synthesis = await self._synthesizer.synthesize(question, result.papers)
             verification = await self._verifier.verify(question, synthesis, result.papers)
-            if any(p.abstract and p.abstract.strip() for p in result.papers) and (
-                verification.status != "no_issues_found" or synthesis.unmatched_citations
-            ):
-                synthesis = await self._synthesizer.revise(
+            if verification.needs_revision:
+                revised = await self._synthesizer.revise(
                     question, result.papers, synthesis, verification
                 )
-                verification = await self._verifier.verify(question, synthesis, result.papers)
-                verification = verification.model_copy(update={"revision_count": 1})
+                # A revision that cites more unlisted papers is worse than the draft it fixes.
+                if len(revised.unmatched_citations) <= len(synthesis.unmatched_citations):
+                    synthesis = revised
+                    verification = await self._verifier.verify(question, synthesis, result.papers)
+                    verification = verification.model_copy(update={"revision_count": 1})
             yield StageEvent("synthesis", synthesis)
             yield StageEvent("verification", verification)
             yield StageEvent("done")
