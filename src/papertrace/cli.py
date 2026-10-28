@@ -5,12 +5,11 @@ import httpx
 from pydantic import ValidationError
 
 from papertrace.agents.orchestrator import OrchestratorAgent
-from papertrace.agents.research import ResearchAgent
+from papertrace.api.dependencies import build_researcher
 from papertrace.domain.errors import PaperTraceError
 from papertrace.domain.models import Paper, ResearchQuestion
 from papertrace.llm.openai_client import build_llm_client
 from papertrace.settings import Settings
-from papertrace.sources.openalex import OpenAlexSource
 
 
 def format_papers(papers: list[Paper]) -> str:
@@ -33,9 +32,9 @@ async def _run(question: str, settings: Settings) -> str:
     semaphore = asyncio.Semaphore(settings.llm_max_concurrency)
     llm = build_llm_client(settings, model=settings.model_for("orchestrator"), semaphore=semaphore)
     async with httpx.AsyncClient(timeout=30) as http:
-        source = OpenAlexSource(client=http, mailto=settings.openalex_mailto)
+        researcher = build_researcher(settings, http)
         plan = await OrchestratorAgent(llm).plan(ResearchQuestion(text=question))
-        result = await ResearchAgent(source).research(plan)
+        result = await researcher.research(plan)
     queries = "\n".join(f"- {q.query} ({q.angle})" for q in plan.queries)
     warning = "".join(f"\nWarning: search failed for {q!r}" for q in result.failed_queries)
     return f"Queries:\n{queries}\n\n{format_papers(result.papers)}{warning}"

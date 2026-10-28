@@ -32,7 +32,7 @@ insufficient-evidence and technical error messages currently remain in English.
 
 ## 3. v1 scope
 
-Four agents, one data source, no persistence, no cross-database verification. Abstract-only verification was explicitly approved.
+Four agents, two data sources, no persistence, no cross-database verification. Abstract-only verification was explicitly approved.
 Anything beyond this is v2 and needs explicit approval before being added.
 
 | Agent | Input | Output | Notes |
@@ -252,7 +252,7 @@ before any CSS is written.
 
 ## 9. Constraints (v1)
 
-- OpenAlex is the only data source.
+- OpenAlex and Semantic Scholar are the approved data sources.
 - Abstract-only verification is approved; no full-text or cross-source verification.
 - No persistence, no auth, no deploy.
 - Do not expand scope without asking.
@@ -286,3 +286,18 @@ Missing usable abstracts skip synthesis/verification LLM calls. Empty assessment
 `VERIFICATION_MODEL` defaults to the effective synthesis model and shares the concurrency cap.
 This is not proof of claim truth: the LLM may omit claims or misjudge support, and abstracts are
 incomplete. Bibliographic identity still uses author/year, with ambiguity reported explicitly.
+
+
+### Approved extension — Semantic Scholar
+API and retrieval CLI search OpenAlex and Semantic Scholar together. Each source returns
+up to 15 papers per query. Results are deduplicated by DOI, or normalized title without a DOI;
+a duplicate with a usable abstract replaces one without an abstract.
+Verification remains abstract-only; there is no independent cross-source verification.
+
+Set optional `SEMANTIC_SCHOLAR_API_KEY` for authenticated access. Without a key,
+Semantic Scholar is still queried, but the shared anonymous pool can return HTTP 429.
+Calls are spaced at least one second apart per application instance, with no automatic retry.
+One failed source does not discard the other's papers: `failed_queries` names both source
+and query. If no papers arrive and any searches failed, processing ends with an error.
+If all searches succeed but find no usable evidence, the existing insufficient-evidence
+response applies. Source adapters and the combined researcher share the existing typed contracts.

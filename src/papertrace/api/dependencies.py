@@ -5,14 +5,15 @@ import asyncio
 import httpx
 from fastapi import Request
 
+from papertrace.agents.multi_source import MultiSourceResearcher
 from papertrace.agents.orchestrator import OrchestratorAgent
-from papertrace.agents.research import ResearchAgent
 from papertrace.agents.synthesis import SynthesisAgent
 from papertrace.agents.verification import VerificationAgent
 from papertrace.llm.openai_client import build_llm_client
 from papertrace.pipeline import Pipeline
 from papertrace.settings import Settings
 from papertrace.sources.openalex import OpenAlexSource
+from papertrace.sources.semantic_scholar import SemanticScholarSource
 
 
 def build_pipeline(settings: Settings, http: httpx.AsyncClient) -> Pipeline:
@@ -25,7 +26,7 @@ def build_pipeline(settings: Settings, http: httpx.AsyncClient) -> Pipeline:
                 settings, model=settings.model_for("orchestrator"), semaphore=semaphore
             )
         ),
-        ResearchAgent(OpenAlexSource(client=http, mailto=settings.openalex_mailto)),
+        build_researcher(settings, http),
         SynthesisAgent(
             build_llm_client(settings, model=settings.model_for("synthesis"), semaphore=semaphore)
         ),
@@ -40,3 +41,15 @@ def build_pipeline(settings: Settings, http: httpx.AsyncClient) -> Pipeline:
 def get_pipeline(request: Request) -> Pipeline:
     pipeline: Pipeline = request.app.state.pipeline
     return pipeline
+
+
+def build_researcher(settings: Settings, http: httpx.AsyncClient) -> MultiSourceResearcher:
+    key = settings.semantic_scholar_api_key
+    return MultiSourceResearcher(
+        {
+            "OpenAlex": OpenAlexSource(client=http, mailto=settings.openalex_mailto),
+            "Semantic Scholar": SemanticScholarSource(
+                client=http, api_key=key.get_secret_value() if key else None
+            ),
+        }
+    )

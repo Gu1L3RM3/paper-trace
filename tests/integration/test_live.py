@@ -58,3 +58,11 @@ async def test_live_verification_report() -> None:
     assert report.claims
     assert report.reason
     print(report.model_dump_json(indent=2))
+
+
+async def test_semantic_scholar_returns_real_papers() -> None:
+    from papertrace.sources.semantic_scholar import SemanticScholarSource
+
+    async with httpx.AsyncClient(timeout=30) as http:
+        result = await SemanticScholarSource(client=http).search("robotics control")
+    assert result and all(p.title and p.url for p in result)
