@@ -30,10 +30,10 @@ Work:
 - `CLAUDE.md`, `AGENTS.md` (≤200 lines each), `.env.example`, README stub.
 
 **Done when:**
-- [ ] `uv run pytest` and `uv run pre-commit run --all-files` pass.
-- [ ] CI is green on GitHub.
-- [ ] A direct push to `main` is rejected.
-- [ ] `wc -l CLAUDE.md AGENTS.md` shows ≤200 each.
+- [x] `uv run pytest` and `uv run pre-commit run --all-files` pass.
+- [x] CI is green on GitHub.
+- [x] A direct push to `main` is rejected.
+- [x] `wc -l CLAUDE.md AGENTS.md` shows ≤200 each.
 
 ---
 
