@@ -27,7 +27,47 @@ def test_grouped_and_pair_citations_are_checked_each() -> None:
     assert find_unmatched_citations(text, PAPERS) == ["Ghost, 2019"]
 
 
-def test_any_listed_author_matches_and_duplicates_collapse() -> None:
-    text = "(Chen, 2020) (Ghost, 2019) (Ghost, 2019) (not a citation) (see Fig. 3)"
+def test_duplicates_collapse_and_non_citations_are_ignored() -> None:
+    text = "(Ghost, 2019) (Ghost, 2019) (not a citation) (see Fig. 3) (see Table 2020)"
 
     assert find_unmatched_citations(text, PAPERS) == ["Ghost, 2019"]
+
+
+def test_only_the_first_author_of_the_same_paper_matches() -> None:
+    papers = [_paper(["Ann Smith", "Bob Jones"], 2020), _paper(["Cy Lee"], 2018)]
+
+    assert find_unmatched_citations("(Jones, 2020) (Smith, 2018) (Smith, 2020)", papers) == [
+        "Jones, 2020",
+        "Smith, 2018",
+    ]
+
+
+def test_narrative_citations_are_checked() -> None:
+    text = "Silva (2020) found X. Silva et al. (2020), Silva and Chen (2020) and Nakamura (2019)."
+
+    assert find_unmatched_citations(text, PAPERS) == ["Nakamura (2019)"]
+
+
+def test_citation_format_variants() -> None:
+    ok = "(Silva 2020) (Silva et al, 2020) (Silva, Chen, 2020) (Silva et al., 2020, p. 5)"
+    bad = "(Fabricated 2021) (Fabricated, 2021, p. 4) (Fabricated, n.d.) (Fabricated, 2021a)"
+
+    assert find_unmatched_citations(ok, PAPERS) == []
+    assert find_unmatched_citations(bad, PAPERS) == [
+        "Fabricated 2021",
+        "Fabricated, 2021, p. 4",
+        "Fabricated, n.d.",
+        "Fabricated, 2021a",
+    ]
+
+
+def test_undated_paper_can_be_cited_as_nd() -> None:
+    papers = [_paper(["Eve Stone"], None)]
+
+    assert find_unmatched_citations("(Stone, n.d.) (Stone, 2020)", papers) == ["Stone, 2020"]
+
+
+def test_suffix_and_last_first_author_names() -> None:
+    papers = [_paper(["Martin Luther King Jr."], 2020), _paper(["Doe, John"], 2019)]
+
+    assert find_unmatched_citations("(King, 2020) (Doe, 2019)", papers) == []

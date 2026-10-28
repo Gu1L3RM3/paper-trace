@@ -55,3 +55,12 @@ async def test_unlisted_citations_are_reported() -> None:
     assert result.markdown.startswith("Sleep helps")
     assert result.unmatched_citations == ["Ghost, 2019"]
     assert result.insufficient_evidence is False
+
+
+async def test_papers_without_any_abstract_count_as_insufficient_evidence() -> None:
+    llm = _llm("Cannot tell.")
+
+    result = await SynthesisAgent(llm).synthesize(QUESTION, [PAPERS[1]])
+
+    assert result.insufficient_evidence is True
+    assert len(llm.calls) == 1

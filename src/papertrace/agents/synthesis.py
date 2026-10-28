@@ -40,5 +40,6 @@ class SynthesisAgent:
         return SynthesisResult(
             markdown=markdown,
             unmatched_citations=find_unmatched_citations(markdown, papers),
-            insufficient_evidence=False,
+            # Titles alone are not evidence; the model is told the abstracts are missing.
+            insufficient_evidence=not any(p.abstract for p in papers),
         )
