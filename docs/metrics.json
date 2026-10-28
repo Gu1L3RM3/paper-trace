@@ -1,0 +1,179 @@
+{
+  "models": {
+    "orchestrator": "gpt-5.4-mini",
+    "synthesis": "gpt-5.4",
+    "verification": "gpt-5.4"
+  },
+  "runs": [
+    {
+      "question": "Does intermittent fasting improve cardiovascular health in adults?",
+      "total_seconds": 157.53,
+      "stage_seconds": {
+        "plan": 1.91,
+        "papers": 3.57,
+        "synthesis": 18.36,
+        "verification": 133.69,
+        "done": 0.0
+      },
+      "papers": 52,
+      "revised": false,
+      "verification_status": "not_verifiable",
+      "llm_calls": [
+        {
+          "model": "gpt-5.4-mini",
+          "tool": true,
+          "prompt_tokens": 590,
+          "completion_tokens": 85
+        },
+        {
+          "model": "gpt-5.4",
+          "tool": false,
+          "prompt_tokens": 22687,
+          "completion_tokens": 1088
+        },
+        {
+          "model": "gpt-5.4",
+          "tool": true,
+          "prompt_tokens": 24870,
+          "completion_tokens": 6980
+        },
+        {
+          "model": "gpt-5.4",
+          "tool": true,
+          "prompt_tokens": 31955,
+          "completion_tokens": 6844
+        }
+      ],
+      "by_model": {
+        "gpt-5.4-mini": {
+          "calls": 1,
+          "prompt_tokens": 590,
+          "completion_tokens": 85
+        },
+        "gpt-5.4": {
+          "calls": 3,
+          "prompt_tokens": 79512,
+          "completion_tokens": 14912
+        }
+      }
+    },
+    {
+      "question": "Qual a evidência de que a atividade física reduz sintomas de depressão?",
+      "total_seconds": 139.98,
+      "stage_seconds": {
+        "plan": 1.15,
+        "papers": 3.57,
+        "synthesis": 26.6,
+        "verification": 108.67,
+        "done": 0.0
+      },
+      "papers": 69,
+      "revised": false,
+      "verification_status": "not_verifiable",
+      "llm_calls": [
+        {
+          "model": "gpt-5.4-mini",
+          "tool": true,
+          "prompt_tokens": 596,
+          "completion_tokens": 76
+        },
+        {
+          "model": "gpt-5.4",
+          "tool": false,
+          "prompt_tokens": 27749,
+          "completion_tokens": 1250
+        },
+        {
+          "model": "gpt-5.4",
+          "tool": true,
+          "prompt_tokens": 30361,
+          "completion_tokens": 5125
+        },
+        {
+          "model": "gpt-5.4",
+          "tool": true,
+          "prompt_tokens": 35632,
+          "completion_tokens": 5100
+        }
+      ],
+      "by_model": {
+        "gpt-5.4-mini": {
+          "calls": 1,
+          "prompt_tokens": 596,
+          "completion_tokens": 76
+        },
+        "gpt-5.4": {
+          "calls": 3,
+          "prompt_tokens": 93742,
+          "completion_tokens": 11475
+        }
+      }
+    },
+    {
+      "question": "How effective are large language models at detecting software vulnerabilities?",
+      "total_seconds": 249.66,
+      "stage_seconds": {
+        "plan": 1.35,
+        "papers": 3.58,
+        "synthesis": 22.77,
+        "verification": 62.64,
+        "synthesis_revision": 159.33,
+        "verification_revision": 0.0,
+        "done": 0.0
+      },
+      "papers": 58,
+      "revised": true,
+      "verification_status": "issues_found",
+      "llm_calls": [
+        {
+          "model": "gpt-5.4-mini",
+          "tool": true,
+          "prompt_tokens": 592,
+          "completion_tokens": 78
+        },
+        {
+          "model": "gpt-5.4",
+          "tool": false,
+          "prompt_tokens": 15875,
+          "completion_tokens": 1319
+        },
+        {
+          "model": "gpt-5.4",
+          "tool": true,
+          "prompt_tokens": 18293,
+          "completion_tokens": 6427
+        },
+        {
+          "model": "gpt-5.4",
+          "tool": false,
+          "prompt_tokens": 24647,
+          "completion_tokens": 1917
+        },
+        {
+          "model": "gpt-5.4",
+          "tool": true,
+          "prompt_tokens": 18898,
+          "completion_tokens": 7892
+        },
+        {
+          "model": "gpt-5.4",
+          "tool": true,
+          "prompt_tokens": 26991,
+          "completion_tokens": 8188
+        }
+      ],
+      "by_model": {
+        "gpt-5.4-mini": {
+          "calls": 1,
+          "prompt_tokens": 592,
+          "completion_tokens": 78
+        },
+        "gpt-5.4": {
+          "calls": 5,
+          "prompt_tokens": 104704,
+          "completion_tokens": 25743
+        }
+      }
+    }
+  ]
+}
