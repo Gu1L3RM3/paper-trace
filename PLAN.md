@@ -45,7 +45,7 @@ papers, and switching LLM provider is a `.env` change.
 TDD order:
 1. Domain models and validation (`SearchPlan` rejects <2 or >4 queries; `Paper` normalizes DOI).
 2. Pure functions: OpenAlex `abstract_inverted_index` → text; dedup by DOI, fallback normalized title.
-3. `LLMClient` port + shared contract tests → `AnthropicClient` → `OpenAICompatibleClient` → factory.
+3. `LLMClient` port + shared contract tests → generic `HttpLLMClient` → factory.
 4. `PaperSource` port → `OpenAlexSource` (httpx async, `respx` with recorded real responses).
 5. `OrchestratorAgent` with a fake `LLMClient`: question → `SearchPlan` through a forced tool call.
 6. `ResearchAgent` with a fake `PaperSource`: concurrency proven by a timing test (N queries of
@@ -56,9 +56,8 @@ SOLID focus: **D** (agents get ports by constructor), **L** (contract tests per 
 **O** (adding a provider touches only `llm/` adapter + factory).
 
 **Done when:**
-- [ ] CLI prints real papers with `LLM_PROVIDER=anthropic` and with `LLM_PROVIDER=openai_compatible`,
-      changing only `.env`.
-- [x] Both LLM adapters pass the same contract suite.
+- [ ] CLI prints real papers against a real chat/completions endpoint, changing only `.env`.
+- [x] The LLM adapter passes the shared contract suite (any new adapter must too).
 - [x] Concurrency test proves queries run in parallel.
 - [ ] Opt-in live test (`pytest -m live`) passes locally; CI stays offline.
 

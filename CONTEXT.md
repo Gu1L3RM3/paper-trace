@@ -70,7 +70,7 @@ Browser (vanilla JS) ──POST /api/research──► FastAPI ──SSE events�
                      │                        │                         │
                 LLMClient (port)        PaperSource (port)         LLMClient (port)
                      │                        │                         │
-       AnthropicClient | OpenAICompatible   OpenAlexSource      AnthropicClient | OpenAICompatible
+       HttpLLMClient | your adapter         OpenAlexSource      HttpLLMClient | your adapter
 ```
 
 Source layout:
@@ -102,10 +102,10 @@ The project must run on any LLM that supports tool calling, and switching provid
 - `LLMClient` is a small async protocol:
   - `call_tool(system, messages, tool: ToolSpec[T]) -> T` — forced tool call, output validated into a Pydantic model.
   - `complete(system, messages) -> str` — free text.
-- Adapters (the **only** modules allowed to import a vendor SDK):
-  - `AnthropicClient` — Anthropic SDK, `tool_choice={"type": "tool", "name": ...}`.
-  - `OpenAICompatibleClient` — OpenAI SDK with `base_url`; covers OpenAI, OpenRouter, Groq, Ollama, vLLM,
-    and any other OpenAI-API endpoint with function calling.
+- `HttpLLMClient` is the built-in adapter: plain `httpx` against any chat/completions endpoint
+  with function calling (Ollama, vLLM, LM Studio, OpenRouter, Groq, gateways, hosted APIs).
+  No vendor SDK is a dependency. APIs with another protocol plug in as a new `LLMClient`
+  class, registered by name or loaded from `LLM_PROVIDER=package.module:function`.
 - `build_llm_client(settings)` picks the adapter from `LLM_PROVIDER`.
 - Each agent can use a different model (`ORCHESTRATOR_MODEL`, `SYNTHESIS_MODEL` override `LLM_MODEL`).
 - All adapters pass the same contract test suite (Liskov substitution, proven by tests).
@@ -116,10 +116,10 @@ The project must run on any LLM that supports tool calling, and switching provid
 
 | Variable | Example | Purpose |
 |---|---|---|
-| `LLM_PROVIDER` | `anthropic` / `openai_compatible` | Selects the adapter |
-| `LLM_API_KEY` | — | Provider key |
-| `LLM_MODEL` | `claude-opus-5-5` | Default model for all agents |
-| `LLM_BASE_URL` | `http://localhost:11434/v1` | Only for OpenAI-compatible endpoints |
+| `LLM_PROVIDER` | `chat_completions` (default) / `pkg.mod:fn` | Selects the adapter |
+| `LLM_API_KEY` | — | Optional bearer key |
+| `LLM_MODEL` | the name your server expects | Default model for all agents (required) |
+| `LLM_BASE_URL` | `http://localhost:11434/v1` | Chat/completions endpoint (required) |
 | `ORCHESTRATOR_MODEL`, `SYNTHESIS_MODEL` | — | Optional per-agent overrides |
 | `LLM_MAX_CONCURRENCY` | `4` | Parallel LLM calls cap |
 | `OPENALEX_MAILTO` | `you@example.com` | OpenAlex polite pool |
@@ -152,7 +152,7 @@ merged through a PR with green CI. `main` is protected.
 ## 7. Stack
 
 Python 3.12, uv, FastAPI, Uvicorn, httpx (async), Pydantic v2, pydantic-settings, sse-starlette,
-Anthropic SDK, OpenAI SDK. Tests: pytest, pytest-asyncio, pytest-cov, respx. Quality: ruff, mypy, pre-commit.
+no LLM vendor SDK. Tests: pytest, pytest-asyncio, pytest-cov, respx. Quality: ruff, mypy, pre-commit.
 Frontend: vanilla HTML/CSS/JS served by FastAPI, no framework, no build step.
 
 ## 8. Frontend direction
