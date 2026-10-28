@@ -1,16 +1,19 @@
 """Every LLMClient adapter must pass this suite unchanged (Liskov)."""
 
+import json
 from collections.abc import Callable
 from dataclasses import dataclass
 
 import anthropic
 import httpx2
+import openai
 import pytest
 from pydantic import BaseModel
 
 from papertrace.domain.errors import LLMError
 from papertrace.llm.anthropic_client import AnthropicClient
 from papertrace.llm.base import LLMClient, Message, ToolSpec
+from papertrace.llm.openai_compatible import OpenAICompatibleClient
 
 
 class Answer(BaseModel):
@@ -60,7 +63,47 @@ ANTHROPIC = Provider(
 )
 
 
-@pytest.fixture(params=[ANTHROPIC], ids=["anthropic"])
+def _openai(transport: httpx2.MockTransport) -> LLMClient:
+    sdk = openai.AsyncOpenAI(
+        api_key="k",
+        base_url="http://llm.test/v1",
+        http_client=httpx2.AsyncClient(transport=transport),
+        max_retries=0,
+    )
+    return OpenAICompatibleClient(client=sdk, model="m")
+
+
+def _chat_completion(message: dict[str, object]) -> dict[str, object]:
+    return {
+        "id": "c1",
+        "object": "chat.completion",
+        "created": 0,
+        "model": "m",
+        "choices": [{"index": 0, "finish_reason": "stop", "message": message}],
+    }
+
+
+OPENAI = Provider(
+    build=_openai,
+    tool_reply=lambda args: _chat_completion(
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "t1",
+                    "type": "function",
+                    "function": {"name": "answer", "arguments": json.dumps(args)},
+                }
+            ],
+        }
+    ),
+    text_reply=lambda text: _chat_completion({"role": "assistant", "content": text}),
+    empty_reply=_chat_completion({"role": "assistant", "content": "no tool"}),
+)
+
+
+@pytest.fixture(params=[ANTHROPIC, OPENAI], ids=["anthropic", "openai_compatible"])
 def provider(request: pytest.FixtureRequest) -> Provider:
     return request.param  # type: ignore[no-any-return]
 
