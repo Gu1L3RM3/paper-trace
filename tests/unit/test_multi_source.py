@@ -1,6 +1,6 @@
 import pytest
 
-from papertrace.agents.multi_source import MultiSourceResearcher
+from papertrace.agents.multi_source import MAX_PAPERS, MultiSourceResearcher
 from papertrace.domain.errors import SourceError
 from papertrace.domain.models import SearchPlan, SearchQuery
 from tests.fakes import FakePaperSource, papers
@@ -76,3 +76,14 @@ async def test_sources_run_concurrently() -> None:
 def test_requires_source() -> None:
     with pytest.raises(ValueError):
         MultiSourceResearcher({})
+
+
+async def test_keeps_only_the_best_ranked_papers() -> None:
+    many = [
+        paper.model_copy(update={"title": f"T{i}", "doi": f"10.1/{i}", "abstract": "text"})
+        for i, paper in enumerate(papers() * 8)
+    ]
+    result = await MultiSourceResearcher(
+        {"OpenAlex": FakePaperSource({"a": many, "b": []})}
+    ).research(plan())
+    assert result.papers == many[:MAX_PAPERS]

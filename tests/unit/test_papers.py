@@ -1,5 +1,10 @@
 from papertrace.domain.models import Paper
-from papertrace.domain.papers import abstract_from_inverted_index, dedup_papers, surname
+from papertrace.domain.papers import (
+    abstract_from_inverted_index,
+    dedup_papers,
+    rank_papers,
+    surname,
+)
 
 
 def _paper(title: str, doi: str | None = None) -> Paper:
@@ -46,3 +51,15 @@ def test_surname_handles_suffixes_and_last_first_order() -> None:
     assert surname("Martin Luther King Jr.") == "King"
     assert surname("Doe, John") == "Doe"
     assert surname("") == ""
+
+
+def test_rank_papers_boosts_papers_found_by_several_lists() -> None:
+    a, b, c = _paper("A", "10.1/a"), _paper("B", "10.1/b"), _paper("C", "10.1/c")
+    assert rank_papers([[a, b], [c, b]]) == [b, a, c]
+
+
+def test_rank_papers_puts_papers_without_abstract_last_and_applies_limit() -> None:
+    bare = _paper("Bare", "10.1/x").model_copy(update={"abstract": None})
+    full = _paper("Full", "10.1/y").model_copy(update={"abstract": "text"})
+    assert rank_papers([[bare, full]]) == [full, bare]
+    assert rank_papers([[bare, full]], limit=1) == [full]

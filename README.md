@@ -93,9 +93,10 @@ The pipeline streams each stage over Server-Sent Events as it completes:
 - **Parallel fan-out.** Queries and sources run with `asyncio.gather`. A single semaphore
   (`LLM_MAX_CONCURRENCY`) is shared by every agent, so it caps LLM calls for the whole app. Semantic
   Scholar calls are spaced at least one second apart.
-- **Multi-source retrieval with dedup.** Each source returns up to 15 papers per query. Papers are
-  merged by normalized DOI, or by normalized title when there is none; the copy with a usable abstract
-  wins.
+- **Multi-source retrieval, dedup and ranking.** Each source returns up to 15 papers per query. Papers
+  are merged by normalized DOI, or by normalized title when there is none; the copy with a usable
+  abstract wins. Reciprocal-rank fusion then orders them, so papers found by several queries or both
+  sources come first, papers without an abstract go last, and only the top 15 reach the LLM prompts.
 - **Ports and adapters.** Agents depend on tiny interfaces (`LLMClient.call_tool/complete`,
   `PaperSource.search`). Adding a provider or source is a new class plus one wiring line in
   `api/dependencies.py`. Every implementation passes the shared contract tests in `tests/contract/`.
@@ -169,43 +170,49 @@ configured model with deterministic checks (no LLM judge), including poisoned-ab
 
 ### End-to-end runs
 
-Three real questions (`tools/measure/run.py`, models from this project's configuration: planning
-`gpt-5.4-mini`, synthesis and verification `gpt-5.4`, concurrency 4):
+Three real questions (`tools/measure/run.py`; planning `gpt-5.4-mini`, synthesis and verification
+`gpt-5.4`, concurrency 4). The first version sent every retrieved paper to the prompts; the current one
+keeps the 15 best (see [ranking](#multi-agent-techniques)). Both measurements are in `docs/`.
 
-| Question | Papers | Total | Revised | Final verification |
+| Question | Papers sent | Total | Revised | Final verification |
 |---|---|---|---|---|
-| Intermittent fasting and cardiovascular health (EN) | 52 | 158 s | no | `not_verifiable` |
-| Physical activity and depression (PT) | 69 | 140 s | no | `not_verifiable` |
-| LLMs detecting software vulnerabilities (EN) | 58 | 250 s | yes | `issues_found` |
+| Fasting and cardiovascular health (EN) | 52 → 15 | 158 s → 161 s | no → yes | `not_verifiable` → `issues_found` |
+| Physical activity and depression (PT) | 69 → 15 | 140 s → 123 s | no → no | `not_verifiable` → `not_verifiable` |
+| LLMs detecting vulnerabilities (EN) | 58 → 15 | 250 s → 148 s | yes → yes | `issues_found` → `issues_found` |
 
-Be aware of what this shows: in two of three runs the verifier's report was rejected twice by the
-deterministic validator (for example "Supported claim needs cited abstract evidence"), so the system
-degraded to `not_verifiable` instead of showing an unchecked verdict. That is the safeguard working, but
-it also means a verifier with `gpt-5.4` is not yet reliable on long reference lists. A separate
-interactive run of the first question completed with claims marked `supported` and quoted evidence (see
-[Interface](#interface)). With only three samples, treat these as indicative, not a benchmark.
+What the numbers say, without rounding in our favor:
 
-![Stage latency](docs/img/stage-latency.svg)
+- Ranking cut input tokens by 32-64%, which is the clear win (see [Consumption](#consumption)).
+- Latency improved on two of three questions (-12% and -41%) and stayed flat on the third. It is
+  dominated by `gpt-5.4` output (11-17k completion tokens per run), not by input size, so a smaller
+  prompt alone does not make it fast.
+- The verifier still has its report rejected twice in one of three runs, and the system then reports
+  `not_verifiable` instead of an unchecked verdict. Two of three runs now end with a real verdict.
+- With three questions these are indicative figures, not a benchmark. A separate interactive run of the
+  first question showed claims marked `supported` with quoted evidence (see [Interface](#interface)).
+
+![Stage latency](docs/img/stage-latency.png)
 
 ## Consumption
 
-Measured from the `usage` field of every chat completion (`docs/metrics.json`):
+Measured from the `usage` field of every chat completion (`docs/metrics.json`, current version; the
+previous version is in `docs/metrics-baseline.json`):
 
-| Question | `gpt-5.4-mini` calls | in / out tokens | `gpt-5.4` calls | in / out tokens |
-|---|---|---|---|---|
-| Fasting (EN) | 1 | 590 / 85 | 3 | 79,512 / 14,912 |
-| Exercise (PT) | 1 | 596 / 76 | 3 | 93,742 / 11,475 |
-| LLM vulnerabilities (EN) | 1 | 592 / 78 | 5 | 104,704 / 25,743 |
+| Question | `gpt-5.4-mini` calls | in / out tokens | `gpt-5.4` calls | in / out tokens | `gpt-5.4` input vs. before |
+|---|---|---|---|---|---|
+| Fasting (EN) | 1 | 590 / 89 | 5 | 53,772 / 17,246 | -32% |
+| Exercise (PT) | 1 | 596 / 63 | 3 | 33,285 / 11,311 | -64% |
+| LLM vulnerabilities (EN) | 1 | 592 / 66 | 4 | 37,333 / 15,074 | -64% |
 
-- Planning is negligible (about 600 input tokens). Nearly all cost is synthesis and verification, because
-  every retrieved abstract goes into both prompts.
-- Verification dominates time: 63-134 s per run, and 159 s for the revision in the third run.
-- Retrieval takes about 3.6 s per run, mostly the Semantic Scholar spacing, and costs no tokens.
+- The fasting run now revised its draft (5 calls instead of 3), so its total fell less than the others.
+- Planning is negligible (about 600 input tokens). Nearly all cost is synthesis and verification.
+- Verification dominates time: 46-98 s, plus 61-77 s per revision.
+- Retrieval takes 2-4 s and costs no tokens.
 - **Cost in USD is not shown on purpose.** Multiply the token columns by your current per-million-token
   prices for each model; this repository does not hard-code provider prices.
 
-Reproduce with `uv run python tools/measure/run.py --out docs/metrics.json` (live APIs, needs `.env`).
-The script wraps the SDK call to read `usage`, so the application code is untouched.
+Reproduce with `uv run python tools/measure/run.py --out docs/metrics.json` (live APIs, needs an env
+file with your key). The script wraps the SDK call to read `usage`, so the application code is untouched.
 
 ## Interface
 
@@ -304,9 +311,12 @@ UI with simulated SSE at four widths.
   full text may look unsupported.
 - Citations are matched by first-author surname and year only.
 - The synthesis text arrives whole, not token by token. No cache, persistence or auth.
-- The verifier can fail validation twice on long inputs and degrade to `not_verifiable` (see Results).
+- The verifier can still fail validation twice and degrade to `not_verifiable` (see Results), and a
+  run takes 2-3 minutes because `gpt-5.4` output dominates latency.
+- Ranking is rank-based, not semantic: it does not read abstracts, so a relevant paper that no search
+  ranked highly can be dropped.
 - Semantic Scholar has no retry; anonymous use can hit rate limits.
 
 Ideas for a next version: arXiv and Crossref sources with cross-source verification, full-text
-verification, persisted sessions, BibTeX and Markdown export, and bounding or ranking the papers sent to
-the prompts to cut tokens.
+verification, persisted sessions, BibTeX and Markdown export, semantic re-ranking of papers, verifying
+claims in parallel batches and lowering the verifier's reasoning effort to cut latency.

@@ -7,67 +7,81 @@
   "runs": [
     {
       "question": "Does intermittent fasting improve cardiovascular health in adults?",
-      "total_seconds": 157.53,
+      "total_seconds": 160.78,
       "stage_seconds": {
-        "plan": 1.91,
-        "papers": 3.57,
-        "synthesis": 18.36,
-        "verification": 133.69,
+        "plan": 2.12,
+        "papers": 3.62,
+        "synthesis": 13.16,
+        "verification": 80.51,
+        "synthesis_revision": 61.36,
+        "verification_revision": 0.0,
         "done": 0.0
       },
-      "papers": 52,
-      "revised": false,
-      "verification_status": "not_verifiable",
+      "papers": 15,
+      "revised": true,
+      "verification_status": "issues_found",
       "llm_calls": [
         {
           "model": "gpt-5.4-mini",
           "tool": true,
           "prompt_tokens": 590,
-          "completion_tokens": 85
+          "completion_tokens": 89
         },
         {
           "model": "gpt-5.4",
           "tool": false,
-          "prompt_tokens": 22687,
-          "completion_tokens": 1088
+          "prompt_tokens": 7394,
+          "completion_tokens": 887
         },
         {
           "model": "gpt-5.4",
           "tool": true,
-          "prompt_tokens": 24870,
-          "completion_tokens": 6980
+          "prompt_tokens": 9269,
+          "completion_tokens": 4747
         },
         {
           "model": "gpt-5.4",
           "tool": true,
-          "prompt_tokens": 31955,
-          "completion_tokens": 6844
+          "prompt_tokens": 14045,
+          "completion_tokens": 4623
+        },
+        {
+          "model": "gpt-5.4",
+          "tool": false,
+          "prompt_tokens": 13473,
+          "completion_tokens": 1201
+        },
+        {
+          "model": "gpt-5.4",
+          "tool": true,
+          "prompt_tokens": 9591,
+          "completion_tokens": 5788
         }
       ],
       "by_model": {
         "gpt-5.4-mini": {
           "calls": 1,
           "prompt_tokens": 590,
-          "completion_tokens": 85
+          "completion_tokens": 89
         },
         "gpt-5.4": {
-          "calls": 3,
-          "prompt_tokens": 79512,
-          "completion_tokens": 14912
+          "calls": 5,
+          "prompt_tokens": 53772,
+          "completion_tokens": 17246
         }
       }
     },
     {
       "question": "Qual a evidência de que a atividade física reduz sintomas de depressão?",
-      "total_seconds": 139.98,
+      "total_seconds": 123.12,
       "stage_seconds": {
-        "plan": 1.15,
-        "papers": 3.57,
-        "synthesis": 26.6,
-        "verification": 108.67,
+        "plan": 1.37,
+        "papers": 2.22,
+        "synthesis": 21.95,
+        "verification": 97.58,
         "done": 0.0
       },
-      "papers": 69,
+      "papers": 15,
       "revised": false,
       "verification_status": "not_verifiable",
       "llm_calls": [
@@ -75,53 +89,53 @@
           "model": "gpt-5.4-mini",
           "tool": true,
           "prompt_tokens": 596,
-          "completion_tokens": 76
+          "completion_tokens": 63
         },
         {
           "model": "gpt-5.4",
           "tool": false,
-          "prompt_tokens": 27749,
-          "completion_tokens": 1250
+          "prompt_tokens": 7835,
+          "completion_tokens": 1343
         },
         {
           "model": "gpt-5.4",
           "tool": true,
-          "prompt_tokens": 30361,
-          "completion_tokens": 5125
+          "prompt_tokens": 10167,
+          "completion_tokens": 4974
         },
         {
           "model": "gpt-5.4",
           "tool": true,
-          "prompt_tokens": 35632,
-          "completion_tokens": 5100
+          "prompt_tokens": 15283,
+          "completion_tokens": 4994
         }
       ],
       "by_model": {
         "gpt-5.4-mini": {
           "calls": 1,
           "prompt_tokens": 596,
-          "completion_tokens": 76
+          "completion_tokens": 63
         },
         "gpt-5.4": {
           "calls": 3,
-          "prompt_tokens": 93742,
-          "completion_tokens": 11475
+          "prompt_tokens": 33285,
+          "completion_tokens": 11311
         }
       }
     },
     {
       "question": "How effective are large language models at detecting software vulnerabilities?",
-      "total_seconds": 249.66,
+      "total_seconds": 147.5,
       "stage_seconds": {
-        "plan": 1.35,
-        "papers": 3.58,
-        "synthesis": 22.77,
-        "verification": 62.64,
-        "synthesis_revision": 159.33,
+        "plan": 1.03,
+        "papers": 2.69,
+        "synthesis": 20.69,
+        "verification": 45.98,
+        "synthesis_revision": 77.11,
         "verification_revision": 0.0,
         "done": 0.0
       },
-      "papers": 58,
+      "papers": 15,
       "revised": true,
       "verification_status": "issues_found",
       "llm_calls": [
@@ -129,49 +143,43 @@
           "model": "gpt-5.4-mini",
           "tool": true,
           "prompt_tokens": 592,
-          "completion_tokens": 78
+          "completion_tokens": 66
         },
         {
           "model": "gpt-5.4",
           "tool": false,
-          "prompt_tokens": 15875,
-          "completion_tokens": 1319
+          "prompt_tokens": 6113,
+          "completion_tokens": 1375
         },
         {
           "model": "gpt-5.4",
           "tool": true,
-          "prompt_tokens": 18293,
-          "completion_tokens": 6427
+          "prompt_tokens": 8520,
+          "completion_tokens": 5558
         },
         {
           "model": "gpt-5.4",
           "tool": false,
-          "prompt_tokens": 24647,
-          "completion_tokens": 1917
+          "prompt_tokens": 13820,
+          "completion_tokens": 1730
         },
         {
           "model": "gpt-5.4",
           "tool": true,
-          "prompt_tokens": 18898,
-          "completion_tokens": 7892
-        },
-        {
-          "model": "gpt-5.4",
-          "tool": true,
-          "prompt_tokens": 26991,
-          "completion_tokens": 8188
+          "prompt_tokens": 8880,
+          "completion_tokens": 6411
         }
       ],
       "by_model": {
         "gpt-5.4-mini": {
           "calls": 1,
           "prompt_tokens": 592,
-          "completion_tokens": 78
+          "completion_tokens": 66
         },
         "gpt-5.4": {
-          "calls": 5,
-          "prompt_tokens": 104704,
-          "completion_tokens": 25743
+          "calls": 4,
+          "prompt_tokens": 37333,
+          "completion_tokens": 15074
         }
       }
     }
