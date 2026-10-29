@@ -1,9 +1,9 @@
+import re
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
 from papertrace.domain.citations import citation_candidates
-from papertrace.domain.errors import InvalidReportError
 from papertrace.domain.models import Paper, SynthesisResult
 
 
@@ -11,8 +11,9 @@ class EvidenceReference(BaseModel):
     paper_index: int = Field(ge=1, description="One-based index of the paper in the supplied list.")
     quote: str = Field(
         min_length=1,
-        description="One contiguous passage copied exactly from that paper's abstract: no "
-        "ellipsis, paraphrase or merged sentences, because it is checked as a literal substring.",
+        description="The passage of that paper's abstract that backs the point, copied as closely "
+        "as you can; the system matches it to the abstract's own sentence and drops it if none "
+        "matches.",
     )
 
 
@@ -21,10 +22,13 @@ class ClaimAssessment(BaseModel):
         min_length=1,
         description="The claim copied exactly from the synthesis, with its attached citation.",
     )
-    assessment: Literal["supported", "partially_supported", "contradicted", "unsupported"] = Field(
+    assessment: Literal[
+        "supported", "partially_supported", "contradicted", "unsupported", "unverified"
+    ] = Field(
         description="supported: the cited abstracts state it. partially_supported: only part of "
         "it, or a weaker form. contradicted: an abstract states the opposite. unsupported: no "
-        "abstract states it, or it is uncited."
+        "abstract states it, or it is uncited. unverified: you could not find an abstract "
+        "passage that backs or contradicts it; use it instead of guessing."
     )
     reason: str = Field(
         min_length=1,
@@ -77,38 +81,85 @@ def _normalized(text: str) -> str:
     return " ".join(text.casefold().split())
 
 
+_SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
+_MIN_OVERLAP = 0.7  # share of the quote's words the abstract sentence must contain
+
+
+def _words(text: str) -> set[str]:
+    return set(re.findall(r"\w+", text.casefold()))
+
+
+def locate_quote(quote: str, abstract: str) -> str | None:
+    """The text to show as evidence, or None when the abstract does not hold the quote.
+
+    An exact passage is kept. Otherwise (ellipsis, paraphrase, merged sentences) the abstract's
+    own best-overlapping sentence replaces it, so the reader only ever sees real abstract text.
+    """
+    wanted = _words(quote)
+    if not wanted:
+        return None
+    if _normalized(quote) in _normalized(abstract):
+        return quote
+    sentence = max(_SENTENCE_END.split(abstract), key=lambda s: len(wanted & _words(s)))
+    return sentence if len(wanted & _words(sentence)) / len(wanted) >= _MIN_OVERLAP else None
+
+
+def _grounded(
+    refs: list[EvidenceReference], papers: list[Paper], allowed: set[int] | None = None
+) -> list[EvidenceReference]:
+    """References whose quote really is in the abstract; `allowed` limits which papers count."""
+    kept = []
+    for ref in refs:
+        if ref.paper_index > len(papers) or (
+            allowed is not None and ref.paper_index not in allowed
+        ):
+            continue
+        quote = locate_quote(ref.quote, papers[ref.paper_index - 1].abstract or "")
+        if quote:
+            kept.append(ref.model_copy(update={"quote": quote}))
+    return kept
+
+
+UNVERIFIED_REASON = "No abstract passage could be matched to this claim, so it is not verified."
+
+
 def validate_report(
     report: VerificationReport, synthesis: SynthesisResult, papers: list[Paper]
 ) -> VerificationResult:
-    findings = list(report.findings)
+    """Keep what the abstracts back and say plainly what they do not.
+
+    A claim without checkable evidence becomes `unverified` and an item that cannot be traced
+    to the synthesis or an abstract is discarded; neither rejects the whole report.
+    """
+    claims: list[ClaimAssessment] = []
+    discarded = 0
     ambiguous = False
     for claim in report.claims:
         if not _normalized(claim.text) or _normalized(claim.text) not in _normalized(
             synthesis.markdown
         ):
-            raise InvalidReportError(
-                "Verification claim is absent from the synthesis. "
-                "Copy each claim literally from the synthesis"
-            )
+            discarded += 1
+            continue
         candidates = citation_candidates(claim.text, papers)
         cited = {i for indices in candidates for i in indices}
-        if claim.assessment in ("supported", "partially_supported"):
-            if not claim.evidence or not cited:
-                raise InvalidReportError(
-                    "Supported claim needs cited abstract evidence. "
-                    "Quote the abstract of a paper the claim cites, or mark it unsupported"
-                )
-            if any(ref.paper_index not in cited for ref in claim.evidence):
-                raise InvalidReportError(
-                    "Support must come from a cited paper. "
-                    "Quote only papers named in the claim's citation; put others in counterevidence"
-                )
-        if claim.assessment == "contradicted" and not (claim.evidence or claim.counterevidence):
-            raise InvalidReportError(
-                "Contradicted claim needs evidence. Quote the abstract that states the opposite"
-            )
         ambiguous = ambiguous or any(len(indices) > 1 for indices in candidates)
-    if ambiguous:
+        backs = claim.assessment in ("supported", "partially_supported")
+        evidence = _grounded(claim.evidence, papers, cited if backs else None)
+        counterevidence = _grounded(claim.counterevidence, papers)
+        update: dict[str, object] = {"evidence": evidence, "counterevidence": counterevidence}
+        if claim.assessment in ("supported", "partially_supported", "contradicted") and not (
+            evidence or (claim.assessment == "contradicted" and counterevidence)
+        ):
+            update |= {"assessment": "unverified", "reason": UNVERIFIED_REASON}
+        claims.append(claim.model_copy(update=update))
+    findings = []
+    for finding in report.findings:
+        evidence = _grounded(finding.evidence, papers)
+        if evidence or finding.kind == "ambiguous_citation":
+            findings.append(finding.model_copy(update={"evidence": evidence}))
+        else:
+            discarded += 1
+    if ambiguous and not any(f.kind == "ambiguous_citation" for f in findings):
         findings.append(
             VerificationFinding(
                 kind="ambiguous_citation",
@@ -116,44 +167,35 @@ def validate_report(
                 evidence=[],
             )
         )
-    references = [ref for claim in report.claims for ref in claim.evidence + claim.counterevidence]
-    for finding in findings:
-        if finding.kind != "ambiguous_citation" and not finding.evidence:
-            raise InvalidReportError(
-                "Verification finding needs abstract evidence. Add an exact abstract quote for it"
-            )
-        references.extend(finding.evidence)
-    for ref in references:
-        if ref.paper_index > len(papers):
-            raise InvalidReportError(
-                "Verification references an unknown paper. "
-                "Use only the one-based indices of the supplied papers"
-            )
-        abstract = papers[ref.paper_index - 1].abstract or ""
-        if not _normalized(ref.quote) or _normalized(ref.quote) not in _normalized(abstract):
-            raise InvalidReportError(
-                "Verification quote is absent from the abstract. "
-                "Quote one contiguous passage copied exactly"
-            )
     # Ambiguity alone cannot be fixed by rewriting, so it reports an issue without a revision.
     needs_revision = bool(
         synthesis.unmatched_citations
         or any(f.kind != "ambiguous_citation" for f in findings)
-        or any(c.assessment != "supported" or c.counterevidence for c in report.claims)
+        or any(c.assessment != "supported" or c.counterevidence for c in claims)
     )
     status: Literal["no_issues_found", "issues_found", "not_verifiable"] = (
         "issues_found"
         if needs_revision or findings
         else "no_issues_found"
-        if report.claims
+        if claims
         else "not_verifiable"
     )
+    unverified = sum(c.assessment == "unverified" for c in claims)
+    notes = [
+        "Assessment limited to retrieved abstracts" if claims else "No assessed factual claims"
+    ]
+    if unverified:
+        notes.append(
+            f"{unverified} claim(s) could not be matched to an abstract and are not verified"
+        )
+    if discarded:
+        notes.append(
+            f"{discarded} verifier item(s) discarded: not traceable to the draft or abstracts"
+        )
     return VerificationResult(
-        claims=report.claims,
+        claims=claims,
         findings=findings,
         status=status,
-        reason="Assessment limited to retrieved abstracts"
-        if report.claims or status == "issues_found"
-        else "No assessed factual claims",
+        reason=". ".join(notes),
         needs_revision=needs_revision,
     )

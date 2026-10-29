@@ -102,11 +102,11 @@ sup.ref a { font: .65rem var(--sans); text-decoration: none; padding-inline: .15
 .cite-unmatched { color: var(--bad); text-decoration: underline wavy; }
 .claim { border-left: 3px solid var(--rule); background: var(--surface); padding: 1rem; margin: 1rem 0; }
 .claim.supported { border-color: var(--ok); }
-.claim.partially_supported { border-color: var(--warn); }
+.claim.partially_supported, .claim.unverified { border-color: var(--warn); }
 .claim.contradicted, .claim.unsupported { border-color: var(--bad); }
 .verdict { font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .5rem; }
 .supported .verdict { color: var(--ok); }
-.partially_supported .verdict { color: var(--warn); }
+.partially_supported .verdict, .unverified .verdict { color: var(--warn); }
 .contradicted .verdict, .unsupported .verdict { color: var(--bad); }
 blockquote { margin: .75rem 0 0; padding: .5rem .75rem; border-left: 1px solid var(--rule); font: .9375rem/1.6 var(--serif); }
 #error { padding: 1rem 1.25rem; border-left: 3px solid var(--bad); background: #f9eeee; color: var(--bad); font-size: .875rem; margin: 1rem 0 2rem; overflow-wrap: anywhere; }

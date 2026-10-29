@@ -1,7 +1,6 @@
 import pytest
 
-from papertrace.agents.verification import REJECTED_REASON, VerificationAgent
-from papertrace.domain.errors import InvalidReportError
+from papertrace.agents.verification import VerificationAgent
 from papertrace.domain.models import Paper, ResearchQuestion, SynthesisResult
 from papertrace.domain.verification import (
     ClaimAssessment,
@@ -39,26 +38,35 @@ async def test_verification_validates_real_evidence_and_prompt() -> None:
 
 
 @pytest.mark.parametrize("index,quote", [(99, "x"), (1, "fabricated evidence")])
-async def test_invalid_evidence_degrades_to_not_verifiable(index: int, quote: str) -> None:
+async def test_invalid_evidence_is_dropped_and_the_claim_is_marked_unverified(
+    index: int, quote: str
+) -> None:
     paper = next(p for p in papers() if p.abstract)
     report = VerificationReport(
         claims=[
             ClaimAssessment(
-                text="claim",
-                assessment="unsupported",
+                text="claim (X, 2000)",
+                assessment="supported",
                 reason="r",
                 evidence=[EvidenceReference(paper_index=index, quote=quote)],
             )
         ],
         findings=[],
     )
-    result = await VerificationAgent(FakeLLMClient(report)).verify(
+    llm = FakeLLMClient(report)
+    result = await VerificationAgent(llm).verify(
         ResearchQuestion(text="q"),
-        SynthesisResult(markdown="claim", unmatched_citations=[], insufficient_evidence=False),
+        SynthesisResult(
+            markdown="claim (X, 2000)", unmatched_citations=[], insufficient_evidence=False
+        ),
         [paper],
     )
-    assert result.status == "not_verifiable"
-    assert "validation" in result.reason
+    assert len(llm.calls) == 1  # nothing is rejected, so there is no second call
+    assert result.status == "issues_found" and result.needs_revision
+    [claim] = result.claims
+    assert claim.assessment == "unverified" and not claim.evidence
+    assert "not verified" in claim.reason
+    assert "1 claim" in result.reason
 
 
 def test_quote_and_claim_matching_ignores_case() -> None:
@@ -119,7 +127,7 @@ def test_assessment_status_and_ambiguity(assessment: str) -> None:
     )
 
 
-def test_report_validation_boundaries() -> None:
+def test_report_problems_are_downgraded_or_discarded_never_raised() -> None:
     from papertrace.domain.verification import VerificationFinding, validate_report
 
     paper = next(p for p in papers() if p.abstract)
@@ -128,39 +136,47 @@ def test_report_validation_boundaries() -> None:
     synthesis = SynthesisResult(markdown=text, unmatched_citations=[], insufficient_evidence=False)
     ref = EvidenceReference(paper_index=1, quote=paper.abstract)
     claim = ClaimAssessment(text=text, assessment="supported", reason="r", evidence=[ref])
-    for invalid in [
-        claim.model_copy(update={"text": "absent claim"}),
+    others = [paper, paper.model_copy(update={"year": 1900})]
+    for weak in [
         claim.model_copy(update={"evidence": []}),
         claim.model_copy(update={"evidence": [ref.model_copy(update={"paper_index": 2})]}),
         claim.model_copy(update={"assessment": "contradicted", "evidence": []}),
     ]:
-        with pytest.raises(InvalidReportError):
-            validate_report(
-                VerificationReport(claims=[invalid], findings=[]),
-                synthesis,
-                [paper, paper.model_copy(update={"year": 1900})],
-            )
+        result = validate_report(VerificationReport(claims=[weak], findings=[]), synthesis, others)
+        assert [c.assessment for c in result.claims] == ["unverified"]
+    absent = claim.model_copy(update={"text": "absent claim"})
+    result = validate_report(VerificationReport(claims=[absent], findings=[]), synthesis, others)
+    assert result.claims == [] and "discarded" in result.reason
     finding = VerificationFinding(
         kind="omission", reason="Relevant evidence omitted", evidence=[ref]
     )
-    assert (
-        validate_report(
-            VerificationReport(claims=[claim], findings=[finding]), synthesis, [paper]
-        ).status
-        == "issues_found"
+    kept = validate_report(
+        VerificationReport(claims=[claim], findings=[finding]), synthesis, [paper]
     )
-    with pytest.raises(InvalidReportError):
-        validate_report(
-            VerificationReport(
-                claims=[claim], findings=[finding.model_copy(update={"evidence": []})]
-            ),
-            synthesis,
-            [paper],
-        )
+    assert kept.status == "issues_found" and kept.findings == [finding]
+    unfounded = finding.model_copy(update={"evidence": []})
+    dropped = validate_report(
+        VerificationReport(claims=[claim], findings=[unfounded]), synthesis, [paper]
+    )
+    assert dropped.findings == [] and "discarded" in dropped.reason
     assert (
         validate_report(VerificationReport(claims=[], findings=[]), synthesis, [paper]).status
         == "not_verifiable"
     )
+
+
+def test_a_quote_is_matched_to_the_abstracts_own_sentence() -> None:
+    from papertrace.domain.verification import locate_quote
+
+    abstract = "Rats ran faster after fasting. Memory scores rose in women after eight weeks."
+    assert locate_quote("memory SCORES rose in women", abstract) == "memory SCORES rose in women"
+    # Paraphrase, ellipsis or merged sentences resolve to the sentence the abstract really has.
+    assert (
+        locate_quote("Memory scores rose in women ... after eight weeks of fasting", abstract)
+        == "Memory scores rose in women after eight weeks."
+    )
+    assert locate_quote("Fasting cures migraines in children", abstract) is None
+    assert locate_quote("", abstract) is None
 
 
 async def test_revision_uses_report_and_rechecks_citations() -> None:
@@ -308,7 +324,7 @@ def _report(quote: str) -> VerificationReport:
         claims=[
             ClaimAssessment(
                 text="claim",
-                assessment="unsupported",
+                assessment="supported",
                 reason="r",
                 evidence=[EvidenceReference(paper_index=1, quote=quote)],
             )
@@ -326,24 +342,12 @@ async def _verify_with(llm: ScriptedLLMClient) -> VerificationResult:
     )
 
 
-async def test_rejected_report_is_returned_to_the_model_for_one_correction() -> None:
-    paper = next(p for p in papers() if p.abstract)
-    good = (paper.abstract or "").split(". ")[0]
-    llm = ScriptedLLMClient(_report("fabricated evidence"), _report(good))
+async def test_a_bad_report_is_finished_in_one_call_and_says_what_was_not_found() -> None:
+    llm = ScriptedLLMClient(_report("fabricated evidence"))
 
     result = await _verify_with(llm)
 
-    assert result.status != "not_verifiable"
-    first, second = llm.calls
-    assert len(first) == 1 and [m.role for m in second] == ["user", "assistant", "user"]
-    assert "fabricated evidence" in second[1].content
-    assert "absent from the abstract" in second[2].content
-
-
-async def test_a_second_rejection_degrades_after_exactly_two_calls() -> None:
-    llm = ScriptedLLMClient(_report("fabricated one"), _report("fabricated two"))
-
-    result = await _verify_with(llm)
-
-    assert result.status == "not_verifiable" and result.reason == REJECTED_REASON
-    assert len(llm.calls) == 2
+    assert len(llm.calls) == 1
+    assert result.status == "issues_found"
+    assert [c.assessment for c in result.claims] == ["unverified"]
+    assert "could not be matched" in result.reason

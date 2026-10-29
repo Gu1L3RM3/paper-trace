@@ -7,13 +7,13 @@
   "runs": [
     {
       "question": "Does intermittent fasting improve cardiovascular health in adults?",
-      "total_seconds": 66.07,
+      "total_seconds": 90.92,
       "stage_seconds": {
-        "plan": 2.02,
-        "papers": 3.6,
-        "synthesis": 6.09,
-        "verification": 19.04,
-        "synthesis_revision": 35.33,
+        "plan": 1.07,
+        "papers": 3.57,
+        "synthesis": 10.09,
+        "verification": 26.81,
+        "synthesis_revision": 49.39,
         "verification_revision": 0.0,
         "done": 0.0
       },
@@ -25,64 +25,66 @@
           "model": "gpt-5.4-mini",
           "tool": true,
           "prompt_tokens": 590,
-          "completion_tokens": 88
+          "completion_tokens": 87
         },
         {
           "model": "gpt-6-luna",
           "tool": false,
-          "prompt_tokens": 8255,
-          "completion_tokens": 504
+          "prompt_tokens": 7807,
+          "completion_tokens": 765
         },
         {
           "model": "gpt-6.1-terra",
           "tool": true,
-          "prompt_tokens": 9352,
-          "completion_tokens": 1515
+          "prompt_tokens": 9054,
+          "completion_tokens": 2290
         },
         {
           "model": "gpt-6-luna",
           "tool": false,
-          "prompt_tokens": 10387,
-          "completion_tokens": 724
+          "prompt_tokens": 10635,
+          "completion_tokens": 910
         },
         {
           "model": "gpt-6.1-terra",
           "tool": true,
-          "prompt_tokens": 9510,
-          "completion_tokens": 2156
+          "prompt_tokens": 9238,
+          "completion_tokens": 3287
         }
       ],
       "by_model": {
         "gpt-5.4-mini": {
           "calls": 1,
           "prompt_tokens": 590,
-          "completion_tokens": 88
+          "completion_tokens": 87
         },
         "gpt-6-luna": {
           "calls": 2,
-          "prompt_tokens": 18642,
-          "completion_tokens": 1228
+          "prompt_tokens": 18442,
+          "completion_tokens": 1675
         },
         "gpt-6.1-terra": {
           "calls": 2,
-          "prompt_tokens": 18862,
-          "completion_tokens": 3671
+          "prompt_tokens": 18292,
+          "completion_tokens": 5577
         }
       }
     },
     {
       "question": "Qual a evidência de que a atividade física reduz sintomas de depressão?",
-      "total_seconds": 49.26,
+      "total_seconds": 98.74,
       "stage_seconds": {
-        "plan": 1.36,
-        "papers": 3.7,
-        "synthesis": 6.83,
-        "verification": 37.37,
+        "plan": 1.28,
+        "papers": 4.57,
+        "synthesis": 11.81,
+        "verification": 28.99,
+        "synthesis_revision": 52.09,
+        "verification_revision": 0.0,
         "done": 0.0
       },
       "papers": 15,
-      "revised": false,
-      "verification_status": "not_verifiable",
+      "revised": true,
+      "verification_status": "issues_found",
       "llm_calls": [
         {
           "model": "gpt-5.4-mini",
@@ -93,20 +95,26 @@
         {
           "model": "gpt-6-luna",
           "tool": false,
-          "prompt_tokens": 7737,
-          "completion_tokens": 467
+          "prompt_tokens": 7970,
+          "completion_tokens": 846
         },
         {
           "model": "gpt-6.1-terra",
           "tool": true,
-          "prompt_tokens": 8887,
-          "completion_tokens": 1631
+          "prompt_tokens": 9329,
+          "completion_tokens": 2473
+        },
+        {
+          "model": "gpt-6-luna",
+          "tool": false,
+          "prompt_tokens": 11245,
+          "completion_tokens": 1032
         },
         {
           "model": "gpt-6.1-terra",
           "tool": true,
-          "prompt_tokens": 10572,
-          "completion_tokens": 1448
+          "prompt_tokens": 9583,
+          "completion_tokens": 3501
         }
       ],
       "by_model": {
@@ -116,26 +124,26 @@
           "completion_tokens": 78
         },
         "gpt-6-luna": {
-          "calls": 1,
-          "prompt_tokens": 7737,
-          "completion_tokens": 467
+          "calls": 2,
+          "prompt_tokens": 19215,
+          "completion_tokens": 1878
         },
         "gpt-6.1-terra": {
           "calls": 2,
-          "prompt_tokens": 19459,
-          "completion_tokens": 3079
+          "prompt_tokens": 18912,
+          "completion_tokens": 5974
         }
       }
     },
     {
       "question": "How effective are large language models at detecting software vulnerabilities?",
-      "total_seconds": 57.92,
+      "total_seconds": 79.6,
       "stage_seconds": {
-        "plan": 1.13,
-        "papers": 3.56,
-        "synthesis": 7.57,
-        "verification": 14.92,
-        "synthesis_revision": 30.74,
+        "plan": 1.52,
+        "papers": 3.57,
+        "synthesis": 8.87,
+        "verification": 22.7,
+        "synthesis_revision": 42.95,
         "verification_revision": 0.0,
         "done": 0.0
       },
@@ -147,48 +155,48 @@
           "model": "gpt-5.4-mini",
           "tool": true,
           "prompt_tokens": 592,
-          "completion_tokens": 76
+          "completion_tokens": 83
         },
         {
           "model": "gpt-6-luna",
           "tool": false,
-          "prompt_tokens": 4610,
-          "completion_tokens": 537
+          "prompt_tokens": 5215,
+          "completion_tokens": 671
         },
         {
           "model": "gpt-6.1-terra",
           "tool": true,
-          "prompt_tokens": 5687,
-          "completion_tokens": 1176
+          "prompt_tokens": 6404,
+          "completion_tokens": 1894
         },
         {
           "model": "gpt-6-luna",
           "tool": false,
-          "prompt_tokens": 6379,
-          "completion_tokens": 863
+          "prompt_tokens": 7651,
+          "completion_tokens": 1066
         },
         {
           "model": "gpt-6.1-terra",
           "tool": true,
-          "prompt_tokens": 5845,
-          "completion_tokens": 1595
+          "prompt_tokens": 6652,
+          "completion_tokens": 2685
         }
       ],
       "by_model": {
         "gpt-5.4-mini": {
           "calls": 1,
           "prompt_tokens": 592,
-          "completion_tokens": 76
+          "completion_tokens": 83
         },
         "gpt-6-luna": {
           "calls": 2,
-          "prompt_tokens": 10989,
-          "completion_tokens": 1400
+          "prompt_tokens": 12866,
+          "completion_tokens": 1737
         },
         "gpt-6.1-terra": {
           "calls": 2,
-          "prompt_tokens": 11532,
-          "completion_tokens": 2771
+          "prompt_tokens": 13056,
+          "completion_tokens": 4579
         }
       }
     }

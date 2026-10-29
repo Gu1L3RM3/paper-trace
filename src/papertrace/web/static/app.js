@@ -161,7 +161,7 @@ const render = {
     progress("verification");
   },
   verification(v) {
-    const labels = { supported: "Supported", partially_supported: "Partially supported", contradicted: "Contradicted", unsupported: "Unsupported" };
+    const labels = { supported: "Supported", partially_supported: "Partially supported", contradicted: "Contradicted", unsupported: "Unsupported", unverified: "Not verified" };
     const nodes = [el("p", v.reason, "note")];
     const quotes = (parent, refs) => refs.forEach((r) => {
       const q = el("blockquote", `“${r.quote}” `);

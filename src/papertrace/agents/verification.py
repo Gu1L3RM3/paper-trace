@@ -1,19 +1,9 @@
 import json
-import logging
 
-from papertrace.domain.errors import InvalidReportError
 from papertrace.domain.models import Paper, ResearchQuestion, SynthesisResult
 from papertrace.domain.papers import prompt_view
 from papertrace.domain.verification import VerificationReport, VerificationResult, validate_report
 from papertrace.llm.base import LLMClient, Message, ToolSpec
-
-logger = logging.getLogger(__name__)
-
-_CORRECTIONS = 1  # times a rejected report goes back to the model
-REJECTED_REASON = (
-    "The verifier's report failed validation against the abstracts, so its claims are unchecked. "
-    "The draft is unchanged; try again to verify it."
-)
 
 _SYSTEM = (
     "You are an evidence auditor. You check a synthesis against the abstracts of the papers it "
@@ -27,17 +17,18 @@ _SYSTEM = (
     "<method>\n"
     "1. Find every relevant factual claim in the synthesis, cited or not. Copy each as a "
     "literal span of the synthesis, including its attached citation.\n"
-    "2. Assess each claim as supported, partially_supported, contradicted or unsupported using "
-    "only the abstracts. Support must come from the papers actually cited in the claim; "
+    "2. Assess each claim as supported, partially_supported, contradicted, unsupported or "
+    "unverified using only the abstracts. If you cannot find a passage that backs or "
+    "contradicts a claim, mark it unverified instead of guessing. Support must come from the "
+    "papers actually cited in the claim; "
     "counterevidence may come from any retrieved paper. Uncited claims are unsupported. A "
     "missing abstract, or a title alone, cannot support a claim.\n"
     "3. Overstated causality, population, magnitude or certainty makes a claim "
     "partially_supported at best.\n"
     "4. Report as findings the relevant results the synthesis omits, contradictions between "
     "abstracts and gaps in answering the question.\n"
-    "5. Quote evidence as one contiguous passage copied exactly from the abstract, with no "
-    "ellipsis, paraphrase or merged sentences, because every quote is checked as a literal "
-    "substring.\n"
+    "5. Quote evidence as a passage of the abstract, as close to verbatim as you can. The "
+    "system matches each quote to the abstract's own sentence and drops any it cannot find.\n"
     "</method>\n\n"
     "<output_rules>\n"
     "Write each reason in the language of the question: an English question gets English "
@@ -100,22 +91,5 @@ class VerificationAgent:
             ensure_ascii=False,
         )
         messages = [Message(role="user", content=payload)]
-        for _ in range(_CORRECTIONS + 1):
-            report = await self._llm.call_tool(system=_SYSTEM, messages=messages, tool=_TOOL)
-            try:
-                return validate_report(report, synthesis, papers)
-            except InvalidReportError as exc:
-                logger.warning("Verifier report rejected: %s", exc)
-                # The rejection reason names what to fix, so the model can correct its own report.
-                messages = [
-                    *messages,
-                    Message(role="assistant", content=report.model_dump_json()),
-                    Message(
-                        role="user",
-                        content=f"Your report was rejected: {exc}. Submit a corrected report.",
-                    ),
-                ]
-        # Verification is advisory: a bad report must not discard a valid synthesis.
-        return VerificationResult(
-            claims=[], findings=[], status="not_verifiable", reason=REJECTED_REASON
-        )
+        report = await self._llm.call_tool(system=_SYSTEM, messages=messages, tool=_TOOL)
+        return validate_report(report, synthesis, papers)

@@ -139,23 +139,6 @@ async def test_openalex_network_failure_is_explained() -> None:
             await OpenAlexSource(client=http).search("x")
 
 
-def test_every_report_rejection_says_what_to_correct() -> None:
-    import inspect
-    import re
-
-    from papertrace.domain import verification
-
-    messages = re.findall(r'InvalidReportError\(\s*"([^"]+)"', inspect.getsource(verification))
-    assert len(messages) == 7
-    assert all(". " in m for m in messages), messages  # "<cause>. <what to fix>"
-
-
-async def test_degraded_verification_tells_the_reader_the_claims_are_unchecked() -> None:
-    from papertrace.agents.verification import REJECTED_REASON
-
-    assert "unchecked" in REJECTED_REASON and "try again" in REJECTED_REASON.lower()
-
-
 @respx.mock
 async def test_reasoning_effort_is_sent_only_when_configured() -> None:
     reply = {"choices": [{"message": {"role": "assistant", "content": "ok"}}]}

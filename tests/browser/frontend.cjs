@@ -11,7 +11,7 @@ const paper = {
 };
 const positions = Object.entries(work.abstract_inverted_index || {}).flatMap(([word, indexes]) => indexes.map(index => [index, word]));
 const quote = positions.sort((a,b)=>a[0]-b[0]).map(entry=>entry[1]).join(" ").slice(0,180);
-const claims = ["supported", "partially_supported", "unsupported", "contradicted"].map(assessment => ({
+const claims = ["supported", "partially_supported", "unsupported", "contradicted", "unverified"].map(assessment => ({
   text: quote, assessment, reason: "Assessment shown for interface validation.",
   evidence: [{paper_index:1, quote}], counterevidence: [],
 }));
