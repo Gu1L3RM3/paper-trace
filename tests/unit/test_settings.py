@@ -34,3 +34,9 @@ def test_builder_returns_an_openai_client_and_base_url_is_optional() -> None:
     assert isinstance(
         build_llm_client(_settings(llm_base_url="http://gw/v1"), model="x"), OpenAIClient
     )
+
+
+def test_reasoning_effort_is_optional_and_reaches_the_client() -> None:
+    assert _settings().llm_reasoning_effort is None
+    client = build_llm_client(_settings(llm_reasoning_effort="none"))
+    assert client._reasoning_effort == "none"

@@ -154,3 +154,17 @@ async def test_degraded_verification_tells_the_reader_the_claims_are_unchecked()
     from papertrace.agents.verification import REJECTED_REASON
 
     assert "unchecked" in REJECTED_REASON and "try again" in REJECTED_REASON.lower()
+
+
+@respx.mock
+async def test_reasoning_effort_is_sent_only_when_configured() -> None:
+    reply = {"choices": [{"message": {"role": "assistant", "content": "ok"}}]}
+    route = respx.post(URL).mock(return_value=httpx.Response(200, json=reply))
+    async with httpx.AsyncClient() as http:
+        sdk = AsyncOpenAI(api_key=SECRET, base_url="http://llm.test/v1", http_client=http)  # type: ignore[arg-type]
+        await OpenAIClient(client=sdk, model="m").complete(system="s", messages=MESSAGES)
+        await OpenAIClient(client=sdk, model="m", reasoning_effort="none").complete(
+            system="s", messages=MESSAGES
+        )
+    assert b"reasoning_effort" not in route.calls[0].request.content
+    assert b'"reasoning_effort":"none"' in route.calls[1].request.content.replace(b" ", b"")

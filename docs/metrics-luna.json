@@ -1,0 +1,185 @@
+{
+  "models": {
+    "orchestrator": "gpt-5.4-mini",
+    "synthesis": "gpt-6-luna",
+    "verification": "gpt-6-luna"
+  },
+  "runs": [
+    {
+      "question": "Does intermittent fasting improve cardiovascular health in adults?",
+      "total_seconds": 35.45,
+      "stage_seconds": {
+        "plan": 1.58,
+        "papers": 2.59,
+        "synthesis": 3.73,
+        "verification": 27.55,
+        "done": 0.0
+      },
+      "papers": 15,
+      "revised": false,
+      "verification_status": "not_verifiable",
+      "llm_calls": [
+        {
+          "model": "gpt-5.4-mini",
+          "tool": true,
+          "prompt_tokens": 590,
+          "completion_tokens": 72
+        },
+        {
+          "model": "gpt-6-luna",
+          "tool": false,
+          "prompt_tokens": 8114,
+          "completion_tokens": 298
+        },
+        {
+          "model": "gpt-6-luna",
+          "tool": true,
+          "prompt_tokens": 9387,
+          "completion_tokens": 2079
+        },
+        {
+          "model": "gpt-6-luna",
+          "tool": true,
+          "prompt_tokens": 11495,
+          "completion_tokens": 2038
+        }
+      ],
+      "by_model": {
+        "gpt-5.4-mini": {
+          "calls": 1,
+          "prompt_tokens": 590,
+          "completion_tokens": 72
+        },
+        "gpt-6-luna": {
+          "calls": 3,
+          "prompt_tokens": 28996,
+          "completion_tokens": 4415
+        }
+      }
+    },
+    {
+      "question": "Qual a evidência de que a atividade física reduz sintomas de depressão?",
+      "total_seconds": 80.12,
+      "stage_seconds": {
+        "plan": 1.41,
+        "papers": 3.57,
+        "synthesis": 4.31,
+        "verification": 28.64,
+        "synthesis_revision": 42.18,
+        "verification_revision": 0.0,
+        "done": 0.0
+      },
+      "papers": 15,
+      "revised": true,
+      "verification_status": "issues_found",
+      "llm_calls": [
+        {
+          "model": "gpt-5.4-mini",
+          "tool": true,
+          "prompt_tokens": 596,
+          "completion_tokens": 77
+        },
+        {
+          "model": "gpt-6-luna",
+          "tool": false,
+          "prompt_tokens": 8399,
+          "completion_tokens": 329
+        },
+        {
+          "model": "gpt-6-luna",
+          "tool": true,
+          "prompt_tokens": 9695,
+          "completion_tokens": 2276
+        },
+        {
+          "model": "gpt-6-luna",
+          "tool": true,
+          "prompt_tokens": 12027,
+          "completion_tokens": 1922
+        },
+        {
+          "model": "gpt-6-luna",
+          "tool": false,
+          "prompt_tokens": 11077,
+          "completion_tokens": 496
+        },
+        {
+          "model": "gpt-6-luna",
+          "tool": true,
+          "prompt_tokens": 9865,
+          "completion_tokens": 2813
+        },
+        {
+          "model": "gpt-6-luna",
+          "tool": true,
+          "prompt_tokens": 12707,
+          "completion_tokens": 2624
+        }
+      ],
+      "by_model": {
+        "gpt-5.4-mini": {
+          "calls": 1,
+          "prompt_tokens": 596,
+          "completion_tokens": 77
+        },
+        "gpt-6-luna": {
+          "calls": 6,
+          "prompt_tokens": 63770,
+          "completion_tokens": 10460
+        }
+      }
+    },
+    {
+      "question": "How effective are large language models at detecting software vulnerabilities?",
+      "total_seconds": 39.22,
+      "stage_seconds": {
+        "plan": 1.24,
+        "papers": 3.56,
+        "synthesis": 6.72,
+        "verification": 27.7,
+        "done": 0.0
+      },
+      "papers": 15,
+      "revised": false,
+      "verification_status": "not_verifiable",
+      "llm_calls": [
+        {
+          "model": "gpt-5.4-mini",
+          "tool": true,
+          "prompt_tokens": 592,
+          "completion_tokens": 81
+        },
+        {
+          "model": "gpt-6-luna",
+          "tool": false,
+          "prompt_tokens": 5160,
+          "completion_tokens": 309
+        },
+        {
+          "model": "gpt-6-luna",
+          "tool": true,
+          "prompt_tokens": 6402,
+          "completion_tokens": 2036
+        },
+        {
+          "model": "gpt-6-luna",
+          "tool": true,
+          "prompt_tokens": 8467,
+          "completion_tokens": 1858
+        }
+      ],
+      "by_model": {
+        "gpt-5.4-mini": {
+          "calls": 1,
+          "prompt_tokens": 592,
+          "completion_tokens": 81
+        },
+        "gpt-6-luna": {
+          "calls": 3,
+          "prompt_tokens": 20029,
+          "completion_tokens": 4203
+        }
+      }
+    }
+  ]
+}
