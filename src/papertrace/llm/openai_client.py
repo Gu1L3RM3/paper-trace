@@ -19,7 +19,7 @@ from pydantic import BaseModel, ValidationError
 
 from papertrace.domain.errors import LLMError
 from papertrace.llm.base import Message, ToolSpec
-from papertrace.settings import Settings
+from papertrace.settings import ReasoningEffort, Settings
 
 _TIMEOUT = 120.0
 _CORRECTIONS = 1  # times a bad tool call goes back to the model
@@ -82,9 +82,15 @@ class OpenAIClient:
     """`LLMClient` over the official OpenAI SDK (chat completions with a forced tool call)."""
 
     def __init__(
-        self, *, client: AsyncOpenAI, model: str, semaphore: asyncio.Semaphore | None = None
+        self,
+        *,
+        client: AsyncOpenAI,
+        model: str,
+        semaphore: asyncio.Semaphore | None = None,
+        reasoning_effort: ReasoningEffort | None = None,
     ) -> None:
         self._client = client
+        self._reasoning_effort = reasoning_effort
         self._model = model
         self._semaphore = semaphore
 
@@ -189,6 +195,8 @@ class OpenAIClient:
             + [{"role": m.role, "content": m.content} for m in messages]
             + (feedback or []),
         )
+        if self._reasoning_effort:
+            extra["reasoning_effort"] = self._reasoning_effort
         try:
             async with self._semaphore or nullcontext():
                 response = await self._client.chat.completions.create(
@@ -210,4 +218,9 @@ def build_llm_client(
         timeout=_TIMEOUT,
         max_retries=_MAX_RETRIES,
     )
-    return OpenAIClient(client=client, model=model or settings.llm_model, semaphore=semaphore)
+    return OpenAIClient(
+        client=client,
+        model=model or settings.llm_model,
+        semaphore=semaphore,
+        reasoning_effort=settings.llm_reasoning_effort,
+    )
