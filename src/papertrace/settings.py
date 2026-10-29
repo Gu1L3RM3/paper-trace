@@ -3,6 +3,8 @@ from typing import Literal
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+ReasoningEffort = Literal["none", "minimal", "low", "medium", "high", "xhigh"]
+
 
 class Settings(BaseSettings):
     # The example env file ships empty values; treat them as unset.
@@ -16,6 +18,8 @@ class Settings(BaseSettings):
     synthesis_model: str | None = None
     verification_model: str | None = None
     llm_max_concurrency: int = 4
+    # Some models (e.g. gpt-6-luna) accept function tools on chat completions only with "none".
+    llm_reasoning_effort: ReasoningEffort | None = None
     openalex_mailto: str | None = None
     semantic_scholar_api_key: SecretStr | None = None
 
