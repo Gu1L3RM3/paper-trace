@@ -258,7 +258,6 @@ Read through `pydantic-settings`; see `.env.example`.
 |---|---|
 | `LLM_API_KEY`, `LLM_MODEL` | required |
 | `ORCHESTRATOR_MODEL`, `SYNTHESIS_MODEL`, `VERIFICATION_MODEL` | per-agent overrides; verification defaults to the synthesis model |
-| `LLM_REASONING_EFFORT` | optional `none`...`xhigh`, sent to every agent; `none` is needed for `gpt-6-luna` with tool calls |
 | `LLM_MAX_CONCURRENCY` | shared cap on parallel LLM calls (default 4) |
 | `LLM_BASE_URL` | only for an OpenAI-compatible gateway |
 | `OPENALEX_MAILTO` | OpenAlex polite pool |
