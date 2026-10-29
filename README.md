@@ -166,53 +166,48 @@ is never leaked in error messages.
 configured model with deterministic checks (no LLM judge), including poisoned-abstract cases.
 
 - Static lint: **9.7 / 10** average.
-- Live cases: **12 / 12 on `gpt-5.4` and 12 / 12 on `gpt-5.4-mini`**.
+- Live cases: **12 / 12 on `gpt-5.4` and 12 / 12 on `gpt-5.4-mini`** (last evaluation run).
 
 ### End-to-end runs
 
-Three real questions (`tools/measure/run.py`; planning `gpt-5.4-mini`, synthesis and verification
-`gpt-5.4`, concurrency 4). The first version sent every retrieved paper to the prompts; the current one
-keeps the 15 best (see [ranking](#multi-agent-techniques)). Both measurements are in `docs/`.
+Three real questions measured with `tools/measure/run.py`. Models: planning `gpt-5.4-mini`, synthesis
+`gpt-6-luna`, verification `gpt-6.1-terra` on the Responses API with `low` reasoning effort, concurrency 4.
+Only the 15 best-ranked papers reach the prompts. Raw data is in `docs/metrics.json`.
 
-| Question | Papers sent | Total | Revised | Final verification |
+| Question | Papers | Total | Revised | Final verification |
 |---|---|---|---|---|
-| Fasting and cardiovascular health (EN) | 52 → 15 | 158 s → 161 s | no → yes | `not_verifiable` → `issues_found` |
-| Physical activity and depression (PT) | 69 → 15 | 140 s → 123 s | no → no | `not_verifiable` → `not_verifiable` |
-| LLMs detecting vulnerabilities (EN) | 58 → 15 | 250 s → 148 s | yes → yes | `issues_found` → `issues_found` |
+| Fasting and cardiovascular health (EN) | 15 | 66 s | yes | `issues_found` |
+| Physical activity and depression (PT) | 15 | 49 s | no | `not_verifiable` |
+| LLMs detecting vulnerabilities (EN) | 15 | 58 s | yes | `issues_found` |
 
-What the numbers say, without rounding in our favor:
-
-- Ranking cut input tokens by 32-64%, which is the clear win (see [Consumption](#consumption)).
-- Latency improved on two of three questions (-12% and -41%) and stayed flat on the third. It is
-  dominated by `gpt-5.4` output (11-17k completion tokens per run), not by input size, so a smaller
-  prompt alone does not make it fast.
-- The verifier still has its report rejected twice in one of three runs, and the system then reports
-  `not_verifiable` instead of an unchecked verdict. Two of three runs now end with a real verdict.
-- With three questions these are indicative figures, not a benchmark. A separate interactive run of the
-  first question showed claims marked `supported` with quoted evidence (see [Interface](#interface)).
+- A run takes about 50-65 s. Verification is the longest stage; a revision adds 31-35 s (rewrite plus
+  re-verification). Planning takes 1-2 s and retrieval about 3.6 s.
+- Two of three runs ended with a real verdict. In the third the verifier's report was rejected twice by
+  the deterministic validator, so the result is `not_verifiable` rather than an unchecked verdict.
+- With three questions these are indicative figures, not a benchmark. An interactive run of the first
+  question showed claims marked `supported` with quoted evidence (see [Interface](#interface)).
 
 ![Stage latency](docs/img/stage-latency.png)
 
 ## Consumption
 
-Measured from the `usage` field of every chat completion (`docs/metrics.json`, current version; the
-previous version is in `docs/metrics-baseline.json`):
+Measured from the `usage` field of every model response (`docs/metrics.json`):
 
-| Question | `gpt-5.4-mini` calls | in / out tokens | `gpt-5.4` calls | in / out tokens | `gpt-5.4` input vs. before |
-|---|---|---|---|---|---|
-| Fasting (EN) | 1 | 590 / 89 | 5 | 53,772 / 17,246 | -32% |
-| Exercise (PT) | 1 | 596 / 63 | 3 | 33,285 / 11,311 | -64% |
-| LLM vulnerabilities (EN) | 1 | 592 / 66 | 4 | 37,333 / 15,074 | -64% |
+| Question | `gpt-5.4-mini` (plan) | `gpt-6-luna` (synthesis) | `gpt-6.1-terra` (verification) |
+|---|---|---|---|
+| Fasting (EN) | 590 in / 88 out | 2 calls: 18,642 in / 1,228 out | 2 calls: 18,862 in / 3,671 out |
+| Exercise (PT) | 596 in / 78 out | 1 call: 7,737 in / 467 out | 2 calls: 19,459 in / 3,079 out |
+| LLM vulnerabilities (EN) | 592 in / 76 out | 2 calls: 10,989 in / 1,400 out | 2 calls: 11,532 in / 2,771 out |
 
-- The fasting run now revised its draft (5 calls instead of 3), so its total fell less than the others.
-- Planning is negligible (about 600 input tokens). Nearly all cost is synthesis and verification.
-- Verification dominates time: 46-98 s, plus 61-77 s per revision.
-- Retrieval takes 2-4 s and costs no tokens.
+- A normal run makes 3 calls (plan, synthesis, verification); a revision adds a rewrite and a second
+  verification. Calls beyond that come from the one allowed correction of a rejected report.
+- Planning is negligible (about 600 input tokens). Input tokens grow with the 15 abstracts that go into
+  both the synthesis and the verification prompt.
 - **Cost in USD is not shown on purpose.** Multiply the token columns by your current per-million-token
   prices for each model; this repository does not hard-code provider prices.
 
 Reproduce with `uv run python tools/measure/run.py --out docs/metrics.json` (live APIs, needs an env
-file with your key). The script wraps the SDK call to read `usage`, so the application code is untouched.
+file with your key). The script wraps the SDK calls to read `usage`, so the application code is untouched.
 
 ## Interface
 
@@ -271,8 +266,10 @@ Configuration used for the numbers above:
 ```
 LLM_MODEL=gpt-5.4-mini
 ORCHESTRATOR_MODEL=gpt-5.4-mini
-SYNTHESIS_MODEL=gpt-5.4
-VERIFICATION_MODEL=gpt-5.4
+SYNTHESIS_MODEL=gpt-6-luna
+VERIFICATION_MODEL=gpt-6.1-terra
+VERIFICATION_API=responses
+VERIFICATION_REASONING_EFFORT=low
 LLM_MAX_CONCURRENCY=4
 ```
 
@@ -315,12 +312,12 @@ UI with simulated SSE at four widths.
   full text may look unsupported.
 - Citations are matched by first-author surname and year only.
 - The synthesis text arrives whole, not token by token. No cache, persistence or auth.
-- The verifier can still fail validation twice and degrade to `not_verifiable` (see Results), and a
-  run takes 2-3 minutes because `gpt-5.4` output dominates latency.
+- The verifier can fail validation twice and degrade to `not_verifiable` (see Results); a run takes
+  about a minute.
 - Ranking is rank-based, not semantic: it does not read abstracts, so a relevant paper that no search
   ranked highly can be dropped.
 - Semantic Scholar has no retry; anonymous use can hit rate limits.
 
 Ideas for a next version: arXiv and Crossref sources with cross-source verification, full-text
 verification, persisted sessions, BibTeX and Markdown export, semantic re-ranking of papers, verifying
-claims in parallel batches and lowering the verifier's reasoning effort to cut latency.
+and claims verified in parallel batches to cut latency.

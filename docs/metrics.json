@@ -1,19 +1,19 @@
 {
   "models": {
     "orchestrator": "gpt-5.4-mini",
-    "synthesis": "gpt-5.4",
-    "verification": "gpt-5.4"
+    "synthesis": "gpt-6-luna",
+    "verification": "gpt-6.1-terra"
   },
   "runs": [
     {
       "question": "Does intermittent fasting improve cardiovascular health in adults?",
-      "total_seconds": 160.78,
+      "total_seconds": 66.07,
       "stage_seconds": {
-        "plan": 2.12,
-        "papers": 3.62,
-        "synthesis": 13.16,
-        "verification": 80.51,
-        "synthesis_revision": 61.36,
+        "plan": 2.02,
+        "papers": 3.6,
+        "synthesis": 6.09,
+        "verification": 19.04,
+        "synthesis_revision": 35.33,
         "verification_revision": 0.0,
         "done": 0.0
       },
@@ -25,60 +25,59 @@
           "model": "gpt-5.4-mini",
           "tool": true,
           "prompt_tokens": 590,
-          "completion_tokens": 89
+          "completion_tokens": 88
         },
         {
-          "model": "gpt-5.4",
+          "model": "gpt-6-luna",
           "tool": false,
-          "prompt_tokens": 7394,
-          "completion_tokens": 887
+          "prompt_tokens": 8255,
+          "completion_tokens": 504
         },
         {
-          "model": "gpt-5.4",
+          "model": "gpt-6.1-terra",
           "tool": true,
-          "prompt_tokens": 9269,
-          "completion_tokens": 4747
+          "prompt_tokens": 9352,
+          "completion_tokens": 1515
         },
         {
-          "model": "gpt-5.4",
-          "tool": true,
-          "prompt_tokens": 14045,
-          "completion_tokens": 4623
-        },
-        {
-          "model": "gpt-5.4",
+          "model": "gpt-6-luna",
           "tool": false,
-          "prompt_tokens": 13473,
-          "completion_tokens": 1201
+          "prompt_tokens": 10387,
+          "completion_tokens": 724
         },
         {
-          "model": "gpt-5.4",
+          "model": "gpt-6.1-terra",
           "tool": true,
-          "prompt_tokens": 9591,
-          "completion_tokens": 5788
+          "prompt_tokens": 9510,
+          "completion_tokens": 2156
         }
       ],
       "by_model": {
         "gpt-5.4-mini": {
           "calls": 1,
           "prompt_tokens": 590,
-          "completion_tokens": 89
+          "completion_tokens": 88
         },
-        "gpt-5.4": {
-          "calls": 5,
-          "prompt_tokens": 53772,
-          "completion_tokens": 17246
+        "gpt-6-luna": {
+          "calls": 2,
+          "prompt_tokens": 18642,
+          "completion_tokens": 1228
+        },
+        "gpt-6.1-terra": {
+          "calls": 2,
+          "prompt_tokens": 18862,
+          "completion_tokens": 3671
         }
       }
     },
     {
       "question": "Qual a evidência de que a atividade física reduz sintomas de depressão?",
-      "total_seconds": 123.12,
+      "total_seconds": 49.26,
       "stage_seconds": {
-        "plan": 1.37,
-        "papers": 2.22,
-        "synthesis": 21.95,
-        "verification": 97.58,
+        "plan": 1.36,
+        "papers": 3.7,
+        "synthesis": 6.83,
+        "verification": 37.37,
         "done": 0.0
       },
       "papers": 15,
@@ -89,49 +88,54 @@
           "model": "gpt-5.4-mini",
           "tool": true,
           "prompt_tokens": 596,
-          "completion_tokens": 63
+          "completion_tokens": 78
         },
         {
-          "model": "gpt-5.4",
+          "model": "gpt-6-luna",
           "tool": false,
-          "prompt_tokens": 7835,
-          "completion_tokens": 1343
+          "prompt_tokens": 7737,
+          "completion_tokens": 467
         },
         {
-          "model": "gpt-5.4",
+          "model": "gpt-6.1-terra",
           "tool": true,
-          "prompt_tokens": 10167,
-          "completion_tokens": 4974
+          "prompt_tokens": 8887,
+          "completion_tokens": 1631
         },
         {
-          "model": "gpt-5.4",
+          "model": "gpt-6.1-terra",
           "tool": true,
-          "prompt_tokens": 15283,
-          "completion_tokens": 4994
+          "prompt_tokens": 10572,
+          "completion_tokens": 1448
         }
       ],
       "by_model": {
         "gpt-5.4-mini": {
           "calls": 1,
           "prompt_tokens": 596,
-          "completion_tokens": 63
+          "completion_tokens": 78
         },
-        "gpt-5.4": {
-          "calls": 3,
-          "prompt_tokens": 33285,
-          "completion_tokens": 11311
+        "gpt-6-luna": {
+          "calls": 1,
+          "prompt_tokens": 7737,
+          "completion_tokens": 467
+        },
+        "gpt-6.1-terra": {
+          "calls": 2,
+          "prompt_tokens": 19459,
+          "completion_tokens": 3079
         }
       }
     },
     {
       "question": "How effective are large language models at detecting software vulnerabilities?",
-      "total_seconds": 147.5,
+      "total_seconds": 57.92,
       "stage_seconds": {
-        "plan": 1.03,
-        "papers": 2.69,
-        "synthesis": 20.69,
-        "verification": 45.98,
-        "synthesis_revision": 77.11,
+        "plan": 1.13,
+        "papers": 3.56,
+        "synthesis": 7.57,
+        "verification": 14.92,
+        "synthesis_revision": 30.74,
         "verification_revision": 0.0,
         "done": 0.0
       },
@@ -143,43 +147,48 @@
           "model": "gpt-5.4-mini",
           "tool": true,
           "prompt_tokens": 592,
-          "completion_tokens": 66
+          "completion_tokens": 76
         },
         {
-          "model": "gpt-5.4",
+          "model": "gpt-6-luna",
           "tool": false,
-          "prompt_tokens": 6113,
-          "completion_tokens": 1375
+          "prompt_tokens": 4610,
+          "completion_tokens": 537
         },
         {
-          "model": "gpt-5.4",
+          "model": "gpt-6.1-terra",
           "tool": true,
-          "prompt_tokens": 8520,
-          "completion_tokens": 5558
+          "prompt_tokens": 5687,
+          "completion_tokens": 1176
         },
         {
-          "model": "gpt-5.4",
+          "model": "gpt-6-luna",
           "tool": false,
-          "prompt_tokens": 13820,
-          "completion_tokens": 1730
+          "prompt_tokens": 6379,
+          "completion_tokens": 863
         },
         {
-          "model": "gpt-5.4",
+          "model": "gpt-6.1-terra",
           "tool": true,
-          "prompt_tokens": 8880,
-          "completion_tokens": 6411
+          "prompt_tokens": 5845,
+          "completion_tokens": 1595
         }
       ],
       "by_model": {
         "gpt-5.4-mini": {
           "calls": 1,
           "prompt_tokens": 592,
-          "completion_tokens": 66
+          "completion_tokens": 76
         },
-        "gpt-5.4": {
-          "calls": 4,
-          "prompt_tokens": 37333,
-          "completion_tokens": 15074
+        "gpt-6-luna": {
+          "calls": 2,
+          "prompt_tokens": 10989,
+          "completion_tokens": 1400
+        },
+        "gpt-6.1-terra": {
+          "calls": 2,
+          "prompt_tokens": 11532,
+          "completion_tokens": 2771
         }
       }
     }
