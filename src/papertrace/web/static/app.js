@@ -77,16 +77,29 @@ function paperFor(citation) {
   return hits.length === 1 ? hits[0][1] : -1;
 }
 
-// Inline markdown: **bold**, *italic* and (Author, Year) citations linked to the reference list.
+function math(source, displayMode = false) {
+  const node = el(displayMode ? "div" : "span", undefined, displayMode ? "math-block" : "");
+  // Model output is untrusted: disable commands that create links, HTML or external requests.
+  katex.render(source, node, { displayMode, throwOnError: false, trust: false, strict: "error", maxSize: 20, maxExpand: 1000 });
+  if (displayMode) {
+    node.tabIndex = 0;
+    node.setAttribute("role", "region");
+    node.setAttribute("aria-label", "Mathematical expression");
+  }
+  return node;
+}
+
+// Parse math before Markdown so operators and parentheses never become emphasis or citations.
 function inline(parent, text, unmatched) {
-  const token = /\*\*(.+?)\*\*|\*(.+?)\*|\(([^()]*\d{4}[^()]*)\)/g;
+  const token = /\\\((.+?)\\\)|(?<!\\)\$(?!\$)([^$\n]+?)\$|\*\*(.+?)\*\*|\*(.+?)\*|\(([^()]*\d{4}[^()]*)\)/g;
   let last = 0;
   for (const m of text.matchAll(token)) {
     parent.append(text.slice(last, m.index));
     last = m.index + m[0].length;
-    if (m[1]) parent.append(el("strong", m[1]));
-    else if (m[2]) parent.append(el("em", m[2]));
-    else parent.append(citation(m[0], m[3], unmatched));
+    if (m[1] || m[2]) parent.append(math(m[1] || m[2]));
+    else if (m[3]) parent.append(el("strong", m[3]));
+    else if (m[4]) parent.append(el("em", m[4]));
+    else parent.append(citation(m[0], m[5], unmatched));
   }
   parent.append(text.slice(last));
 }
@@ -106,6 +119,17 @@ function citation(whole, inner, unmatched) {
 }
 
 function markdown(md, unmatched) {
+  const out = document.createDocumentFragment();
+  // Extract display math before splitting lines; matrices and aligned equations span lines.
+  const blocks = md.split(/(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\])/g);
+  for (const [index, block] of blocks.entries()) {
+    if (index % 2) out.append(math(block.slice(2, -2), true));
+    else out.append(markdownText(block, unmatched));
+  }
+  return out;
+}
+
+function markdownText(md, unmatched) {
   const out = document.createDocumentFragment();
   let list = null;
   for (const line of md.split("\n")) {
