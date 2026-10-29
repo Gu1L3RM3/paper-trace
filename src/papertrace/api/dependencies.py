@@ -32,7 +32,11 @@ def build_pipeline(settings: Settings, http: httpx.AsyncClient) -> Pipeline:
         ),
         VerificationAgent(
             build_llm_client(
-                settings, model=settings.model_for("verification"), semaphore=semaphore
+                settings,
+                model=settings.model_for("verification"),
+                semaphore=semaphore,
+                api=settings.verification_api,
+                reasoning_effort=settings.verification_reasoning_effort,
             )
         ),
     )

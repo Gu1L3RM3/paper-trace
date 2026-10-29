@@ -15,6 +15,7 @@ from typing import Any
 
 import httpx
 from openai.resources.chat.completions import AsyncCompletions
+from openai.resources.responses import AsyncResponses
 
 from papertrace.api.dependencies import build_pipeline
 from papertrace.domain.models import ResearchQuestion
@@ -29,23 +30,36 @@ QUESTIONS = [
 _usage: list[dict[str, Any]] = []
 
 
-def _patch_sdk() -> None:
-    original = AsyncCompletions.create
+def _record(kwargs: dict[str, Any], prompt: int, completion: int) -> None:
+    _usage.append(
+        {
+            "model": kwargs.get("model"),
+            "tool": bool(kwargs.get("tools")),
+            "prompt_tokens": prompt,
+            "completion_tokens": completion,
+        }
+    )
 
-    async def create(self: Any, *args: Any, **kwargs: Any) -> Any:
-        response = await original(self, *args, **kwargs)
+
+def _patch_sdk() -> None:
+    chat, responses = AsyncCompletions.create, AsyncResponses.create
+
+    async def create_chat(self: Any, *args: Any, **kwargs: Any) -> Any:
+        response = await chat(self, *args, **kwargs)
         usage = response.usage
-        _usage.append(
-            {
-                "model": kwargs.get("model"),
-                "tool": bool(kwargs.get("tools")),
-                "prompt_tokens": usage.prompt_tokens if usage else 0,
-                "completion_tokens": usage.completion_tokens if usage else 0,
-            }
+        _record(
+            kwargs, usage.prompt_tokens if usage else 0, usage.completion_tokens if usage else 0
         )
         return response
 
-    AsyncCompletions.create = create  # type: ignore[method-assign,assignment]
+    async def create_response(self: Any, *args: Any, **kwargs: Any) -> Any:
+        response = await responses(self, *args, **kwargs)
+        usage = response.usage
+        _record(kwargs, usage.input_tokens if usage else 0, usage.output_tokens if usage else 0)
+        return response
+
+    AsyncCompletions.create = create_chat  # type: ignore[method-assign,assignment]
+    AsyncResponses.create = create_response  # type: ignore[method-assign,assignment]
 
 
 async def _measure(settings: Settings, http: httpx.AsyncClient, question: str) -> dict[str, Any]:
