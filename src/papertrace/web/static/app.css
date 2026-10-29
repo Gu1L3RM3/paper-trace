@@ -164,3 +164,6 @@ blockquote { margin: .75rem 0 0; padding: .5rem .75rem; border-left: 1px solid v
   html { scroll-behavior: auto; }
   *, *::before { animation: none !important; transition: none !important; }
 }
+.math-block { max-width: 100%; overflow-x: auto; margin-block: 1rem; }
+.math-block .katex-display { margin: .5rem 0; }
+.math-block .katex-display > .katex { text-align: left; }

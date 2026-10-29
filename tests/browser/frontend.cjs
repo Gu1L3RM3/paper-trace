@@ -20,7 +20,16 @@ const base = process.env.PAPERTRACE_URL || "http://127.0.0.1:8765";
 const ev = (event, data) => "event: " + event + "\ndata: " + JSON.stringify(data) + "\n\n";
 const plan = { queries: [{query:"fasting cognition evidence",angle:"cognition"},{query:"fasting clinical outcomes",angle:"clinical evidence"}] };
 const synthesis = {
-  markdown: "## What the abstracts tell us\nEvidence is limited. (" + paper.authors[0].split(" ").pop() + ", " + paper.year + ")",
+  markdown: "## What the abstracts tell us\nEvidence is limited. (" + paper.authors[0].split(" ").pop() + ", " + paper.year + ")\n" + String.raw`Inline $\frac{a}{b}$ and \(x_i * y_i\), with **emphasis** outside math.
+$$
+\begin{pmatrix}1 & 2 \\ 3 & 4\end{pmatrix}
+$$
+\[
+\sum_{i=1}^{n} x_i = \underbrace{a + b + c + d + e + f + g + h + j + k + l + m}_{\text{a long expression}}
+\]
+Invalid $\frac{$ stays visible; unknown $\notACommand{x}$ is marked. Unclosed $x remains text.
+Unsafe $\href{javascript:alert(1)}{click}$ and $\includegraphics{https://example.invalid/track.png}$ are blocked.
+<img src=x onerror=alert(1)>`,
   unmatched_citations: [], insufficient_evidence: false,
 };
 (async () => {
@@ -44,7 +53,7 @@ const synthesis = {
         : ev("papers", {papers: mode === "empty" ? [] : [paper],failed_queries: mode === "partial" ? ["Semantic Scholar: fasting cognition evidence"] : []})
           + ev("synthesis", {...synthesis, insufficient_evidence: mode === "empty"})
           + ev("verification", {reason:"Abstract-only assessment; inspect the original papers.",claims:mode === "success" ? claims : [],findings:[],revision_count:0,status:"not_verifiable"})
-          + (mode === "revision" ? ev("synthesis", {...synthesis,markdown:"Revised evidence summary.",revision:true}) + ev("verification", {reason:"Revised abstract assessment.",claims:[],findings:[],revision_count:1,status:"not_verifiable"}) : "")
+          + (mode === "revision" ? ev("synthesis", {...synthesis,markdown:String.raw`Revised evidence summary. \(E=mc^2\)`,revision:true}) + ev("verification", {reason:"Revised abstract assessment.",claims:[],findings:[],revision_count:1,status:"not_verifiable"}) : "")
           + ev("done", {}));
       if (mode === "interrupted") body = ev("plan", plan);
       await route.fulfill({status:200, contentType:"text/event-stream", body});
@@ -61,6 +70,16 @@ const synthesis = {
       await page.keyboard.press("Enter");
       await page.locator("#papers .warn").waitFor();
       await page.getByText("Research complete", {exact:true}).waitFor();
+      assert.equal(await page.locator("#synthesis .katex-display").count(),2);
+      assert.equal(await page.locator("#synthesis math").count(),7);
+      assert.equal(await page.locator("#synthesis .katex-error").count(),1);
+      assert.equal(await page.locator("#synthesis img, #synthesis a[href^='javascript:']").count(),0);
+      assert.match(await page.locator("#synthesis").innerText(),/Unclosed \$x remains text/);
+      assert.equal(await page.locator("#synthesis strong").innerText(),"emphasis");
+      const formula = page.locator("#synthesis .math-block").last();
+      await formula.focus();
+      assert.equal(await formula.evaluate(e=>document.activeElement===e),true);
+      await page.keyboard.press("ArrowRight");
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
       assert.equal(await page.locator("#ask button[type=submit]").isEnabled(),true);
       const reference=page.locator("#synthesis sup a").first();
@@ -83,6 +102,7 @@ const synthesis = {
       if (mode==="revision") {
         assert.match(await page.locator("#synthesis").innerText(),/Revised evidence summary/);
         assert.doesNotMatch(await page.locator("#synthesis").innerText(),/What the abstracts tell us/);
+        assert.equal(await page.locator("#synthesis math").count(),1);
       }
       if (mode==="empty") assert.match(await page.locator("#papers").innerText(),/No papers found/);
       await page.screenshot({path:path.join(out,mode+"-final.png"),fullPage:true});
@@ -97,7 +117,7 @@ const synthesis = {
     await page.locator("#question").fill("Another research question");
     await page.locator("#ask button[type=submit]").click();
     await page.getByText("Research complete",{exact:true}).waitFor();
-    assert.equal(await page.locator(".claim").count(),4);
+    assert.equal(await page.locator(".claim").count(),claims.length);
     await page.screenshot({path:path.join(out,"claims-desktop.png"),fullPage:true});
     mode = "error";
     await page.locator("#ask button[type=submit]").click();

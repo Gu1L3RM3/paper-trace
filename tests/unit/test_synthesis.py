@@ -40,6 +40,8 @@ async def test_prompt_contains_only_the_retrieved_papers_and_the_grounding_rules
     prompt = messages[0].content
     assert "only" in system.lower() and "listed papers" in system
     assert "insufficient" in system.lower()
+    assert "LaTeX" in system and r"\(" in system and r"\[" in system
+    assert "abstracts" in system
     assert QUESTION.text in prompt
     for paper in PAPERS:
         assert paper.title in prompt

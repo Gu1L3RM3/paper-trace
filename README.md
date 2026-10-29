@@ -219,6 +219,13 @@ file with your key). The script wraps the SDK calls to read `usage`, so the appl
 Vanilla JS, no build step, no external fonts. Each SSE event renders as it arrives, every citation links
 to its reference and every reference links to its DOI or URL. Keyboard-usable and phone-friendly.
 
+Synthesis answers render LaTeX mathematics with locally bundled KaTeX 0.19.1 (MIT):
+`\( ... \)` or `$ ... $` inline, and `\[ ... \]` or `$$ ... $$` for display equations,
+including multiline matrices. Wide equations scroll within their block. Invalid or unsupported
+expressions remain visible; untrusted links, HTML and external resources in math are disabled.
+This is formula rendering, not proof verification: evidence assessment still uses abstracts only.
+The upstream distribution and license are in `web/static/vendor/katex/`; no CDN or build is needed.
+
 | Progress | Evidence assessment |
 |---|---|
 | ![Progress](docs/img/ui-progress.png) | ![Verification](docs/img/ui-verification.png) |
