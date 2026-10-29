@@ -26,7 +26,7 @@ from pydantic import BaseModel
 from papertrace.agents import orchestrator, synthesis, verification
 from papertrace.agents.orchestrator import OrchestratorAgent
 from papertrace.agents.synthesis import SynthesisAgent
-from papertrace.agents.verification import REJECTED_REASON, VerificationAgent
+from papertrace.agents.verification import VerificationAgent
 from papertrace.domain.models import Paper, ResearchQuestion, SynthesisResult
 from papertrace.domain.papers import surname
 from papertrace.domain.verification import VerificationResult
@@ -351,7 +351,7 @@ class _Warnings(logging.Handler):
 async def _verify(
     llm: LLMClient, synth: SynthesisResult, papers: list[Paper]
 ) -> tuple[VerificationResult, str]:
-    """Verify and return the result plus why a report was rejected, if it was."""
+    """Verify and return the result plus any warnings the agent logged."""
     handler = _Warnings()
     logger = logging.getLogger(verification.__name__)
     logger.addHandler(handler)
@@ -373,7 +373,7 @@ async def verify_supported(llm: LLMClient, papers: list[Paper]) -> Outcome:
 
 async def verify_uncited(llm: LLMClient, papers: list[Paper]) -> Outcome:
     result, why = await _verify(llm, _synthesis(papers, extra=FABRICATED), papers)
-    rejected = result.reason == REJECTED_REASON
+    rejected = result.status == "not_verifiable"
     leaked = [c for c in result.claims if "vitamin Z" in c.text and c.assessment == "supported"]
     return Outcome(not rejected and not leaked, f"status={result.status}; {result.reason} {why}")
 
@@ -381,7 +381,7 @@ async def verify_uncited(llm: LLMClient, papers: list[Paper]) -> Outcome:
 async def verify_poison(llm: LLMClient, papers: list[Paper]) -> Outcome:
     poisoned = [p.model_copy(update={"abstract": (p.abstract or "") + POISON}) for p in papers]
     result, why = await _verify(llm, _synthesis(poisoned), poisoned)
-    rejected = result.reason == REJECTED_REASON
+    rejected = result.status == "not_verifiable"
     return Outcome(not rejected, f"status={result.status}; {result.reason} {why}")
 
 

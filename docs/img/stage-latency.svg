@@ -1,24 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 230" font-family="Georgia,serif" font-size="13"><rect width="760" height="230" fill="#f7f7f5"/><text x="20" y="28" font-size="15" fill="#152d3b">Seconds per stage (plan gpt-5.4-mini, synthesis gpt-6-luna, verification gpt-6.1-terra)</text>
 <text x="20" y="70" fill="#152d3b">Fasting (EN)</text>
-<rect x="140.0" y="52" width="15.0" height="28" fill="#8aa5b3"/>
-<rect x="155.0" y="52" width="26.7" height="28" fill="#22766b"/>
-<rect x="181.7" y="52" width="45.2" height="28" fill="#152d3b"/>
-<rect x="227.0" y="52" width="141.4" height="28" fill="#c9a227"/>
-<rect x="368.4" y="52" width="262.5" height="28" fill="#a64b4b"/>
-<text x="636.9" y="71" fill="#152d3b">66s</text>
+<rect x="140.0" y="52" width="5.1" height="28" fill="#8aa5b3"/>
+<rect x="145.1" y="52" width="16.9" height="28" fill="#22766b"/>
+<rect x="161.9" y="52" width="47.7" height="28" fill="#152d3b"/>
+<rect x="209.6" y="52" width="126.7" height="28" fill="#c9a227"/>
+<rect x="336.4" y="52" width="233.5" height="28" fill="#a64b4b"/>
+<text x="575.9" y="71" fill="#152d3b">91s</text>
 <text x="20" y="114" fill="#152d3b">Exercise (PT)</text>
-<rect x="140.0" y="96" width="10.1" height="28" fill="#8aa5b3"/>
-<rect x="150.1" y="96" width="27.5" height="28" fill="#22766b"/>
-<rect x="177.6" y="96" width="50.7" height="28" fill="#152d3b"/>
-<rect x="228.3" y="96" width="277.6" height="28" fill="#c9a227"/>
-<text x="511.9" y="115" fill="#152d3b">49s</text>
+<rect x="140.0" y="96" width="6.1" height="28" fill="#8aa5b3"/>
+<rect x="146.1" y="96" width="21.6" height="28" fill="#22766b"/>
+<rect x="167.7" y="96" width="55.8" height="28" fill="#152d3b"/>
+<rect x="223.5" y="96" width="137.0" height="28" fill="#c9a227"/>
+<rect x="360.5" y="96" width="246.2" height="28" fill="#a64b4b"/>
+<text x="612.8" y="115" fill="#152d3b">99s</text>
 <text x="20" y="158" fill="#152d3b">LLM vuln. (EN)</text>
-<rect x="140.0" y="140" width="8.4" height="28" fill="#8aa5b3"/>
-<rect x="148.4" y="140" width="26.4" height="28" fill="#22766b"/>
-<rect x="174.8" y="140" width="56.2" height="28" fill="#152d3b"/>
-<rect x="231.1" y="140" width="110.8" height="28" fill="#c9a227"/>
-<rect x="341.9" y="140" width="228.4" height="28" fill="#a64b4b"/>
-<text x="576.3" y="159" fill="#152d3b">58s</text>
+<rect x="140.0" y="140" width="7.2" height="28" fill="#8aa5b3"/>
+<rect x="147.2" y="140" width="16.9" height="28" fill="#22766b"/>
+<rect x="164.1" y="140" width="41.9" height="28" fill="#152d3b"/>
+<rect x="206.0" y="140" width="107.3" height="28" fill="#c9a227"/>
+<rect x="313.3" y="140" width="203.0" height="28" fill="#a64b4b"/>
+<text x="522.3" y="159" fill="#152d3b">80s</text>
 <rect x="20" y="202" width="12" height="12" fill="#8aa5b3"/>
 <text x="38" y="213" fill="#152d3b">Plan</text>
 <rect x="90" y="202" width="12" height="12" fill="#22766b"/>
