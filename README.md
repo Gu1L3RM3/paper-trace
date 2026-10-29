@@ -253,7 +253,6 @@ Read through `pydantic-settings`; see `.env.example`.
 |---|---|
 | `LLM_API_KEY`, `LLM_MODEL` | required |
 | `ORCHESTRATOR_MODEL`, `SYNTHESIS_MODEL`, `VERIFICATION_MODEL` | per-agent overrides; verification defaults to the synthesis model |
-| `LLM_REASONING_EFFORT` | optional `none`...`xhigh`, sent to every agent; `none` is needed for `gpt-6-luna` with tool calls |
 | `VERIFICATION_REASONING_EFFORT` | optional `none`...`xhigh`; applies to the verifier only |
 | `VERIFICATION_API` | `chat` (default) or `responses`; models such as `gpt-6.1-terra` take tools only on the Responses API |
 | `LLM_MAX_CONCURRENCY` | shared cap on parallel LLM calls (default 4) |
