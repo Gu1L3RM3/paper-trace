@@ -1,0 +1,196 @@
+{
+  "models": {
+    "orchestrator": "gpt-5.4-mini",
+    "synthesis": "gpt-6-luna",
+    "verification": "gpt-6.1-terra"
+  },
+  "runs": [
+    {
+      "question": "Does intermittent fasting improve cardiovascular health in adults?",
+      "total_seconds": 95.82,
+      "stage_seconds": {
+        "plan": 1.35,
+        "papers": 3.58,
+        "synthesis": 9.58,
+        "verification": 30.01,
+        "synthesis_revision": 51.29,
+        "verification_revision": 0.0,
+        "done": 0.0
+      },
+      "papers": 15,
+      "revised": true,
+      "verification_status": "issues_found",
+      "llm_calls": [
+        {
+          "model": "gpt-5.4-mini",
+          "tool": true,
+          "prompt_tokens": 590,
+          "completion_tokens": 93
+        },
+        {
+          "model": "gpt-6-luna",
+          "tool": false,
+          "prompt_tokens": 8563,
+          "completion_tokens": 615
+        },
+        {
+          "model": "gpt-6.1-terra",
+          "tool": true,
+          "prompt_tokens": 9685,
+          "completion_tokens": 2545
+        },
+        {
+          "model": "gpt-6-luna",
+          "tool": false,
+          "prompt_tokens": 11614,
+          "completion_tokens": 1023
+        },
+        {
+          "model": "gpt-6.1-terra",
+          "tool": true,
+          "prompt_tokens": 9981,
+          "completion_tokens": 3273
+        }
+      ],
+      "by_model": {
+        "gpt-5.4-mini": {
+          "calls": 1,
+          "prompt_tokens": 590,
+          "completion_tokens": 93
+        },
+        "gpt-6-luna": {
+          "calls": 2,
+          "prompt_tokens": 20177,
+          "completion_tokens": 1638
+        },
+        "gpt-6.1-terra": {
+          "calls": 2,
+          "prompt_tokens": 19666,
+          "completion_tokens": 5818
+        }
+      }
+    },
+    {
+      "question": "Qual a evidência de que a atividade física reduz sintomas de depressão?",
+      "total_seconds": 83.89,
+      "stage_seconds": {
+        "plan": 1.29,
+        "papers": 3.22,
+        "synthesis": 13.75,
+        "verification": 65.62,
+        "done": 0.0
+      },
+      "papers": 15,
+      "revised": false,
+      "verification_status": "not_verifiable",
+      "llm_calls": [
+        {
+          "model": "gpt-5.4-mini",
+          "tool": true,
+          "prompt_tokens": 596,
+          "completion_tokens": 78
+        },
+        {
+          "model": "gpt-6-luna",
+          "tool": false,
+          "prompt_tokens": 8399,
+          "completion_tokens": 897
+        },
+        {
+          "model": "gpt-6.1-terra",
+          "tool": true,
+          "prompt_tokens": 9789,
+          "completion_tokens": 2903
+        },
+        {
+          "model": "gpt-6.1-terra",
+          "tool": true,
+          "prompt_tokens": 12609,
+          "completion_tokens": 2763
+        }
+      ],
+      "by_model": {
+        "gpt-5.4-mini": {
+          "calls": 1,
+          "prompt_tokens": 596,
+          "completion_tokens": 78
+        },
+        "gpt-6-luna": {
+          "calls": 1,
+          "prompt_tokens": 8399,
+          "completion_tokens": 897
+        },
+        "gpt-6.1-terra": {
+          "calls": 2,
+          "prompt_tokens": 22398,
+          "completion_tokens": 5666
+        }
+      }
+    },
+    {
+      "question": "How effective are large language models at detecting software vulnerabilities?",
+      "total_seconds": 95.35,
+      "stage_seconds": {
+        "plan": 1.25,
+        "papers": 3.57,
+        "synthesis": 8.27,
+        "verification": 30.83,
+        "synthesis_revision": 51.42,
+        "verification_revision": 0.0,
+        "done": 0.0
+      },
+      "papers": 15,
+      "revised": true,
+      "verification_status": "issues_found",
+      "llm_calls": [
+        {
+          "model": "gpt-5.4-mini",
+          "tool": true,
+          "prompt_tokens": 592,
+          "completion_tokens": 79
+        },
+        {
+          "model": "gpt-6-luna",
+          "tool": false,
+          "prompt_tokens": 5127,
+          "completion_tokens": 551
+        },
+        {
+          "model": "gpt-6.1-terra",
+          "tool": true,
+          "prompt_tokens": 6279,
+          "completion_tokens": 2636
+        },
+        {
+          "model": "gpt-6-luna",
+          "tool": false,
+          "prompt_tokens": 8012,
+          "completion_tokens": 1273
+        },
+        {
+          "model": "gpt-6.1-terra",
+          "tool": true,
+          "prompt_tokens": 6610,
+          "completion_tokens": 3033
+        }
+      ],
+      "by_model": {
+        "gpt-5.4-mini": {
+          "calls": 1,
+          "prompt_tokens": 592,
+          "completion_tokens": 79
+        },
+        "gpt-6-luna": {
+          "calls": 2,
+          "prompt_tokens": 13139,
+          "completion_tokens": 1824
+        },
+        "gpt-6.1-terra": {
+          "calls": 2,
+          "prompt_tokens": 12889,
+          "completion_tokens": 5669
+        }
+      }
+    }
+  ]
+}

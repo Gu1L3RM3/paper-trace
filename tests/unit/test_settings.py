@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from papertrace.llm.openai_client import OpenAIClient, build_llm_client
+from papertrace.llm.openai_responses import OpenAIResponsesClient
 from papertrace.settings import Settings
 
 
@@ -36,7 +37,14 @@ def test_builder_returns_an_openai_client_and_base_url_is_optional() -> None:
     )
 
 
-def test_reasoning_effort_is_optional_and_reaches_the_client() -> None:
-    assert _settings().llm_reasoning_effort is None
-    client = build_llm_client(_settings(llm_reasoning_effort="none"))
-    assert client._reasoning_effort == "none"
+def test_verification_effort_and_api_default_to_unset_chat() -> None:
+    settings = _settings()
+    assert settings.verification_reasoning_effort is None
+    assert settings.verification_api == "chat"
+
+
+def test_builder_picks_the_adapter_and_passes_the_effort() -> None:
+    chat = build_llm_client(_settings(), reasoning_effort="low")
+    assert isinstance(chat, OpenAIClient)
+    assert chat._reasoning_effort == "low"
+    assert isinstance(build_llm_client(_settings(), api="responses"), OpenAIResponsesClient)

@@ -1,6 +1,6 @@
 import asyncio
 from contextlib import nullcontext
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 from openai import (
     APIConnectionError,
@@ -18,7 +18,7 @@ from openai.types.chat import ChatCompletionMessage, ChatCompletionMessageParam
 from pydantic import BaseModel, ValidationError
 
 from papertrace.domain.errors import LLMError
-from papertrace.llm.base import Message, ToolSpec
+from papertrace.llm.base import LLMClient, Message, ToolSpec
 from papertrace.settings import ReasoningEffort, Settings
 
 _TIMEOUT = 120.0
@@ -209,8 +209,13 @@ class OpenAIClient:
 
 
 def build_llm_client(
-    settings: Settings, *, model: str | None = None, semaphore: asyncio.Semaphore | None = None
-) -> OpenAIClient:
+    settings: Settings,
+    *,
+    model: str | None = None,
+    semaphore: asyncio.Semaphore | None = None,
+    api: Literal["chat", "responses"] = "chat",
+    reasoning_effort: ReasoningEffort | None = None,
+) -> LLMClient:
     """`model` overrides LLM_MODEL for one agent; LLM_BASE_URL only matters for gateways."""
     client = AsyncOpenAI(
         api_key=settings.llm_api_key.get_secret_value(),
@@ -218,9 +223,13 @@ def build_llm_client(
         timeout=_TIMEOUT,
         max_retries=_MAX_RETRIES,
     )
-    return OpenAIClient(
+    # Imported here because the Responses adapter reuses this module's helpers.
+    from papertrace.llm.openai_responses import OpenAIResponsesClient
+
+    adapter = OpenAIResponsesClient if api == "responses" else OpenAIClient
+    return adapter(
         client=client,
         model=model or settings.llm_model,
         semaphore=semaphore,
-        reasoning_effort=settings.llm_reasoning_effort,
+        reasoning_effort=reasoning_effort,
     )
