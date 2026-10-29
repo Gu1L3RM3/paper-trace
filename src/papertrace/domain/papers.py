@@ -11,6 +11,9 @@ def abstract_from_inverted_index(index: dict[str, list[int]] | None) -> str | No
     return " ".join(words[pos] for pos in sorted(words))
 
 
+_RRF_K = 60  # standard damping constant for reciprocal-rank fusion
+
+
 def _normalize_title(title: str) -> str:
     """Case, accent and punctuation insensitive, but keeps non-Latin scripts distinct."""
     decomposed = unicodedata.normalize("NFKD", title.casefold())
@@ -31,6 +34,20 @@ def dedup_papers(papers: list[Paper]) -> list[Paper]:
         ):
             seen[key] = paper
     return list(seen.values())
+
+
+def rank_papers(ranked_lists: list[list[Paper]], limit: int | None = None) -> list[Paper]:
+    """Reciprocal-rank fusion: papers many searches agree on come first.
+
+    Papers without an abstract go last because neither synthesis nor verification can use them.
+    """
+    scores: dict[str, float] = {}
+    for ranked in ranked_lists:
+        for rank, paper in enumerate(ranked):
+            scores[_key(paper)] = scores.get(_key(paper), 0.0) + 1 / (_RRF_K + rank)
+    merged = dedup_papers([paper for ranked in ranked_lists for paper in ranked])
+    merged.sort(key=lambda p: (not (p.abstract or "").strip(), -scores[_key(p)]))
+    return merged[:limit]
 
 
 _NAME_SUFFIXES = {"jr", "sr", "ii", "iii", "iv"}

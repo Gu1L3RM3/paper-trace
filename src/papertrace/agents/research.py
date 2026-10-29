@@ -2,7 +2,7 @@ import asyncio
 
 from papertrace.domain.errors import SourceError
 from papertrace.domain.models import Paper, ResearchResult, SearchPlan
-from papertrace.domain.papers import dedup_papers
+from papertrace.domain.papers import rank_papers
 from papertrace.sources.base import PaperSource
 
 
@@ -15,7 +15,7 @@ class ResearchAgent:
         outcomes = await asyncio.gather(
             *(self._source.search(q) for q in queries), return_exceptions=True
         )
-        papers: list[Paper] = []
+        ranked: list[list[Paper]] = []
         failed: list[tuple[str, SourceError]] = []
         for query, outcome in zip(queries, outcomes, strict=True):
             if isinstance(outcome, SourceError):
@@ -23,7 +23,7 @@ class ResearchAgent:
             elif isinstance(outcome, BaseException):
                 raise outcome  # not a source failure: a bug that must not be hidden
             else:
-                papers += outcome
+                ranked.append(outcome)
         if len(failed) == len(queries):
             raise failed[0][1]
-        return ResearchResult(papers=dedup_papers(papers), failed_queries=[q for q, _ in failed])
+        return ResearchResult(papers=rank_papers(ranked), failed_queries=[q for q, _ in failed])

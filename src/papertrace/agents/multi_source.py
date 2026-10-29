@@ -3,8 +3,11 @@ import asyncio
 from papertrace.agents.research import ResearchAgent
 from papertrace.domain.errors import SourceError
 from papertrace.domain.models import Paper, ResearchResult, SearchPlan
-from papertrace.domain.papers import dedup_papers
+from papertrace.domain.papers import rank_papers
 from papertrace.sources.base import PaperSource
+
+# Every paper goes into the synthesis and verification prompts, so this bounds tokens and latency.
+MAX_PAPERS = 15
 
 
 class MultiSourceResearcher:
@@ -18,7 +21,7 @@ class MultiSourceResearcher:
             *(ResearchAgent(source).research(plan) for source in self._sources.values()),
             return_exceptions=True,
         )
-        papers: list[Paper] = []
+        ranked: list[list[Paper]] = []
         failed: list[str] = []
         errors: list[SourceError] = []
         for name, outcome in zip(self._sources, outcomes, strict=True):
@@ -28,8 +31,8 @@ class MultiSourceResearcher:
             elif isinstance(outcome, BaseException):
                 raise outcome
             else:
-                papers.extend(outcome.papers)
+                ranked.append(outcome.papers)
                 failed.extend(f"{name}: {q}" for q in outcome.failed_queries)
         if len(errors) == len(outcomes):
             raise errors[0]
-        return ResearchResult(papers=dedup_papers(papers), failed_queries=failed)
+        return ResearchResult(papers=rank_papers(ranked, MAX_PAPERS), failed_queries=failed)
