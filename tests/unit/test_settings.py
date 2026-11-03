@@ -3,6 +3,8 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
+from papertrace.domain.errors import LLMError
+from papertrace.llm.chatgpt_plan import ChatGPTPlanClient
 from papertrace.llm.openai_client import OpenAIClient, build_llm_client
 from papertrace.llm.openai_responses import OpenAIResponsesClient
 from papertrace.settings import Settings
@@ -13,9 +15,8 @@ def _settings(**overrides: Any) -> Settings:
     return Settings(_env_file=None, **values)
 
 
-def test_api_key_and_model_are_required() -> None:
-    with pytest.raises(ValidationError, match="llm_api_key"):
-        _settings(llm_api_key=None)
+def test_model_is_required_and_the_api_key_optional_for_chatgpt_sign_in() -> None:
+    assert _settings(llm_api_key=None).llm_api_key is None
     with pytest.raises(ValidationError, match="llm_model"):
         _settings(llm_model=None)
 
@@ -48,3 +49,16 @@ def test_builder_picks_the_adapter_and_passes_the_effort() -> None:
     assert isinstance(chat, OpenAIClient)
     assert chat._reasoning_effort == "low"
     assert isinstance(build_llm_client(_settings(), api="responses"), OpenAIResponsesClient)
+
+
+def test_builder_uses_the_plan_adapter_when_given_a_chatgpt_token() -> None:
+    async def token() -> str:
+        return "t"
+
+    client = build_llm_client(_settings(llm_api_key=None), chatgpt_token=token, api="chat")
+    assert isinstance(client, ChatGPTPlanClient)
+
+
+def test_builder_without_any_credential_asks_to_connect() -> None:
+    with pytest.raises(LLMError, match="Connect ChatGPT"):
+        build_llm_client(_settings(llm_api_key=None))

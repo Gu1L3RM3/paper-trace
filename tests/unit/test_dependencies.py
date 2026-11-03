@@ -1,7 +1,9 @@
 import asyncio
+from pathlib import Path
 
 import httpx
 import pytest
+from starlette.datastructures import State
 
 from papertrace.api import dependencies
 from papertrace.settings import Settings
@@ -57,3 +59,31 @@ async def test_only_the_verifier_gets_the_api_and_effort(monkeypatch: pytest.Mon
         dependencies.build_pipeline(settings, http)
 
     assert seen == [("chat", None), ("chat", None), ("responses", "low")]
+
+
+async def test_a_chatgpt_token_reaches_every_agent(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[object] = []
+
+    def recording(settings: Settings, **kwargs: object) -> object:
+        seen.append(kwargs.get("chatgpt_token"))
+        return object()
+
+    async def token() -> str:
+        return "t"
+
+    monkeypatch.setattr(dependencies, "build_llm_client", recording)
+    async with httpx.AsyncClient() as http:
+        dependencies.build_pipeline(Settings(_env_file=None, llm_model="m"), http, token)
+
+    assert seen == [token, token, token]
+
+
+async def test_wire_uses_the_api_key_while_chatgpt_is_not_connected(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(dependencies, "_CHATGPT_FILE", tmp_path / "chatgpt.json")
+    state = State()
+    async with httpx.AsyncClient() as http:
+        dependencies.wire(state, Settings(_env_file=None, llm_api_key="k", llm_model="m"), http)
+
+    assert state.pipeline is not None and not state.chatgpt.connected

@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import Awaitable, Callable
 from contextlib import nullcontext
 from typing import Any, Literal, cast
 
@@ -22,6 +23,7 @@ from papertrace.llm.base import LLMClient, Message, ToolSpec
 from papertrace.settings import ReasoningEffort, Settings
 
 _TIMEOUT = 120.0
+NO_CREDENTIALS = "Connect ChatGPT (top right) or set LLM_API_KEY to start researching."
 _CORRECTIONS = 1  # times a bad tool call goes back to the model
 _MAX_RETRIES = 2  # SDK retries 408/409/429/5xx and network errors with backoff
 # Keywords that strict decoders reject; ToolSpec.output still enforces them locally.
@@ -215,18 +217,31 @@ def build_llm_client(
     semaphore: asyncio.Semaphore | None = None,
     api: Literal["chat", "responses"] = "chat",
     reasoning_effort: ReasoningEffort | None = None,
+    chatgpt_token: Callable[[], Awaitable[str]] | None = None,
 ) -> LLMClient:
-    """`model` overrides LLM_MODEL for one agent; LLM_BASE_URL only matters for gateways."""
-    client = AsyncOpenAI(
-        api_key=settings.llm_api_key.get_secret_value(),
-        base_url=settings.llm_base_url,
-        timeout=_TIMEOUT,
-        max_retries=_MAX_RETRIES,
-    )
-    # Imported here because the Responses adapter reuses this module's helpers.
+    """`model` overrides LLM_MODEL for one agent; LLM_BASE_URL only matters for gateways.
+
+    `chatgpt_token` (a signed-in ChatGPT session) takes precedence over LLM_API_KEY.
+    """
+    # Imported here because these adapters reuse this module's helpers.
+    from papertrace.llm.chatgpt_plan import ChatGPTPlanClient
     from papertrace.llm.openai_responses import OpenAIResponsesClient
 
-    adapter = OpenAIResponsesClient if api == "responses" else OpenAIClient
+    adapter: type[OpenAIClient | OpenAIResponsesClient]
+    if chatgpt_token is not None:
+        # Plan usage is served only by OpenAI's own endpoint, so LLM_BASE_URL does not apply.
+        client = AsyncOpenAI(api_key=chatgpt_token, timeout=_TIMEOUT, max_retries=_MAX_RETRIES)
+        adapter = ChatGPTPlanClient
+    elif settings.llm_api_key is None:
+        raise LLMError(NO_CREDENTIALS)
+    else:
+        client = AsyncOpenAI(
+            api_key=settings.llm_api_key.get_secret_value(),
+            base_url=settings.llm_base_url,
+            timeout=_TIMEOUT,
+            max_retries=_MAX_RETRIES,
+        )
+        adapter = OpenAIResponsesClient if api == "responses" else OpenAIClient
     return adapter(
         client=client,
         model=model or settings.llm_model,
