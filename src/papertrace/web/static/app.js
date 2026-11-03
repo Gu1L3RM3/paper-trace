@@ -242,6 +242,7 @@ async function ask(text) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ text }),
   });
+  if (response.status === 503) throw new Error((await response.json()).detail);
   if (!response.ok) throw new Error(response.status === 422 ? "Enter a question first." : `The server answered ${response.status}. Try again.`);
   let finished = false;
   for await (const { event, data } of readEvents(response)) {
@@ -272,3 +273,41 @@ $("ask").addEventListener("submit", async (e) => {
     button.querySelector("span").textContent = "Trace the evidence";
   }
 });
+
+// ChatGPT sign-in lives on the server; the page only shows its state.
+function showSignInProblem(message) {
+  $("error").textContent = message;
+  $("error").hidden = false;
+}
+
+async function showAccount() {
+  let account;
+  try {
+    account = await (await fetch("/api/auth/chatgpt")).json();
+  } catch {
+    return;
+  }
+  $("chatgpt-connect").hidden = account.connected;
+  $("chatgpt-connected").hidden = !account.connected;
+  $("chatgpt-email").textContent = account.email || "";
+  if (account.error) showSignInProblem(account.error);
+}
+
+$("chatgpt-disconnect").addEventListener("click", async () => {
+  const button = $("chatgpt-disconnect");
+  button.disabled = true;
+  try {
+    const { revoked } = await (await fetch("/api/auth/chatgpt/logout", { method: "POST" })).json();
+    $("status").textContent = revoked
+      ? "ChatGPT disconnected."
+      : "ChatGPT disconnected here, but OpenAI did not confirm it. You can also remove PaperTrace in ChatGPT Settings.";
+  } catch {
+    showSignInProblem("Could not disconnect ChatGPT. Check that the server is running.");
+  } finally {
+    button.disabled = false;
+  }
+  await showAccount();
+  if (!$("chatgpt-connect").hidden) $("chatgpt-connect").focus();
+});
+
+showAccount();
