@@ -3,7 +3,6 @@
 import asyncio
 from collections.abc import Awaitable, Callable
 from functools import partial
-from pathlib import Path
 
 import httpx
 from fastapi import HTTPException, Request
@@ -16,11 +15,11 @@ from papertrace.agents.verification import VerificationAgent
 from papertrace.llm.chatgpt_auth import ChatGPTAuth
 from papertrace.llm.openai_client import NO_CREDENTIALS, build_llm_client
 from papertrace.pipeline import Pipeline
-from papertrace.settings import Settings
+from papertrace.settings import CONFIG_DIR, Settings
 from papertrace.sources.openalex import OpenAlexSource
 from papertrace.sources.semantic_scholar import SemanticScholarSource
 
-_CHATGPT_FILE = Path.home() / ".config" / "papertrace" / "chatgpt.json"
+_CHATGPT_FILE = CONFIG_DIR / "chatgpt.json"
 
 
 def build_pipeline(
