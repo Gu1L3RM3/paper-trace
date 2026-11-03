@@ -22,7 +22,7 @@ def main() -> int:
         return 1
     port = _free_port()
     url = f"http://{_HOST}:{port}/"
-    print(f"PaperTrace is running at {url} (Ctrl+C to stop)")
+    print(f"PaperTrace is running at {url} (Ctrl+C to stop)", flush=True)
     threading.Thread(target=_open_when_ready, args=(url, port), daemon=True).start()
     uvicorn.run("papertrace.api.app:app", host=_HOST, port=port)
     return 0
