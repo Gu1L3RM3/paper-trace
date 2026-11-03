@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from papertrace.domain.errors import LLMError
 from papertrace.llm.base import LLMClient, Message, ToolSpec
+from papertrace.llm.chatgpt_plan import ChatGPTPlanClient
 from papertrace.llm.openai_client import OpenAIClient
 
 
@@ -34,6 +35,10 @@ class Provider:
     text_reply: Callable[[str], dict[str, object]]
     empty_reply: dict[str, object]
     no_content_reply: dict[str, object]
+    # How a successful payload goes over the wire (plain JSON unless the API streams).
+    respond: Callable[[dict[str, object]], httpx.Response] = lambda body: httpx.Response(
+        200, json=body
+    )
 
 
 def _chat_completion(message: dict[str, object]) -> dict[str, object]:
@@ -70,13 +75,65 @@ HTTP = Provider(
 )
 
 
-@pytest.fixture(params=[HTTP], ids=["http"])
+def _response(*output: dict[str, object]) -> dict[str, object]:
+    return {"id": "r", "object": "response", "status": "completed", "output": list(output)}
+
+
+def _message(text: str) -> dict[str, object]:
+    return {
+        "type": "message",
+        "id": "m",
+        "role": "assistant",
+        "status": "completed",
+        "content": [{"type": "output_text", "text": text, "annotations": []}],
+    }
+
+
+def _streamed(response: dict[str, object]) -> httpx.Response:
+    event = {"type": "response.completed", "response": response}
+    return httpx.Response(
+        200,
+        text=f"event: response.completed\ndata: {json.dumps(event)}\n\n",
+        headers={"content-type": "text/event-stream"},
+    )
+
+
+CHATGPT_PLAN = Provider(
+    build=lambda client, key: ChatGPTPlanClient(
+        client=AsyncOpenAI(
+            api_key=key or "k",
+            base_url=BASE_URL,
+            http_client=client,  # type: ignore[arg-type]
+            max_retries=2,
+        ),
+        model="m",
+    ),
+    url=f"{BASE_URL}/responses",
+    tool_reply=lambda args: _response(
+        {
+            "type": "function_call",
+            "id": "fc",
+            "call_id": "c",
+            "name": "answer",
+            "arguments": json.dumps(args),
+            "status": "completed",
+        }
+    ),
+    text_reply=lambda text: _response(_message(text)),
+    empty_reply=_response(_message("no tool")),
+    no_content_reply=_response(),
+    respond=_streamed,
+)
+
+
+@pytest.fixture(params=[HTTP, CHATGPT_PLAN], ids=["http", "chatgpt-plan"])
 def provider(request: pytest.FixtureRequest) -> Provider:
     return request.param  # type: ignore[no-any-return]
 
 
 def _mock(provider: Provider, status: int, payload: dict[str, object]) -> respx.Route:
-    return respx.post(provider.url).mock(return_value=httpx.Response(status, json=payload))
+    reply = provider.respond(payload) if status == 200 else httpx.Response(status, json=payload)
+    return respx.post(provider.url).mock(return_value=reply)
 
 
 @respx.mock
@@ -172,7 +229,7 @@ def no_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
 async def test_transient_failure_is_retried(
     provider: Provider, failure: httpx.Response | Exception
 ) -> None:
-    ok = httpx.Response(200, json=provider.text_reply("ok"))
+    ok = provider.respond(provider.text_reply("ok"))
     route = respx.post(provider.url).mock(side_effect=[failure, ok])
     async with httpx.AsyncClient() as http:
         assert await provider.build(http, None).complete(system="s", messages=MESSAGES) == "ok"

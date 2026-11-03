@@ -32,15 +32,7 @@ class OpenAIResponsesClient:
         self, *, system: str, messages: list[Message], tool: ToolSpec[T]
     ) -> T:
         """Forced tool call; a bad call goes back to the model, which gets one chance to fix it."""
-        tools = [
-            {
-                "type": "function",
-                "name": tool.name,
-                "description": tool.description,
-                "parameters": tool_parameters(tool.output),
-                "strict": False,
-            }
-        ]
+        tools = self._tools(tool)
         choice = {"type": "function", "name": tool.name}
         feedback: list[dict[str, str]] = []
         for attempt in range(_CORRECTIONS + 1):
@@ -91,6 +83,21 @@ class OpenAIResponsesClient:
             )
         return text
 
+    def _tools(self, tool: ToolSpec[Any]) -> list[dict[str, Any]]:
+        return [
+            {
+                "type": "function",
+                "name": tool.name,
+                "description": tool.description,
+                "parameters": tool_parameters(tool.output),
+                "strict": False,
+            }
+        ]
+
+    async def _send(self, **request: Any) -> Response:
+        response: Response = await self._client.responses.create(**request)
+        return response
+
     async def _create(
         self,
         system: str,
@@ -106,9 +113,8 @@ class OpenAIResponsesClient:
         )
         try:
             async with self._semaphore or nullcontext():
-                response: Response = await self._client.responses.create(
+                return await self._send(
                     model=self._model, instructions=system, input=items, **extra
                 )
-                return response
         except (OpenAIError, AttributeError, TypeError) as exc:
             raise LLMError(_explain(exc, self._model)) from exc
