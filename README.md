@@ -379,3 +379,7 @@ UI with simulated SSE at four widths.
 Ideas for a next version: arXiv and Crossref sources with cross-source verification, full-text
 verification, persisted sessions, BibTeX and Markdown export, semantic re-ranking of papers, verifying
 and claims verified in parallel batches to cut latency.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
