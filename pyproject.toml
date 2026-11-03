@@ -1,6 +1,6 @@
 [project]
 name = "papertrace"
-version = "0.1.0"
+version = "0.1.1"
 description = "Multi-agent research assistant that cites only the papers it actually retrieved."
 readme = "README.md"
 license = "MIT"
