@@ -5,7 +5,9 @@ question in English or Portuguese and get a synthesis that cites **only papers i
 from OpenAlex and Semantic Scholar. A separate agent then audits every claim against the abstracts and
 the draft is revised once if the audit finds problems.
 
-![Home screen](docs/img/ui-home.png)
+Runs on your computer: `uv tool install papertrace`, then `papertrace` (see [Install and run](#install-and-run)).
+
+![Home screen](https://raw.githubusercontent.com/Gu1L3RM3/paper-trace/main/docs/img/ui-home.png)
 
 ## Contents
 
@@ -50,18 +52,22 @@ curl -LsSf https://astral.sh/uv/install.sh | sh                          # Linux
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"   # Windows
 ```
 
-Then start PaperTrace:
+Then install PaperTrace and start it:
 
 ```bash
-uvx papertrace
+uv tool install papertrace   # once: adds the papertrace command
+papertrace                   # every time you want to use it
 ```
 
 The browser opens on the app (`http://127.0.0.1:8000`, or the next free port). Click
 **Connect ChatGPT** to research with your ChatGPT plan; no configuration is needed. Stop it with
-Ctrl+C. `uvx papertrace@latest` updates it.
+Ctrl+C.
 
-Until the first PyPI release, install from GitHub instead:
-`uvx --from git+https://github.com/Gu1L3RM3/paper-trace papertrace`.
+| To | Run |
+|---|---|
+| Try it without installing | `uvx papertrace` |
+| Update to the latest version | `uv tool upgrade papertrace` |
+| Uninstall | `uv tool uninstall papertrace` |
 
 Optional settings (an API key, other models) go in `~/.config/papertrace/config.env`, using the
 variables from [Configuration](#configuration). A `.env` in the folder where you start the app
@@ -235,7 +241,7 @@ Only the 15 best-ranked papers reach the prompts. Raw data is in `docs/metrics.j
   revision all 12 claims were supported.
 - With three questions these are indicative figures, not a benchmark.
 
-![Stage latency](docs/img/stage-latency.png)
+![Stage latency](https://raw.githubusercontent.com/Gu1L3RM3/paper-trace/main/docs/img/stage-latency.png)
 
 ## Consumption
 
@@ -270,13 +276,13 @@ The upstream distribution and license are in `web/static/vendor/katex/`; no CDN 
 
 | Progress | Evidence assessment |
 |---|---|
-| ![Progress](docs/img/ui-progress.png) | ![Verification](docs/img/ui-verification.png) |
+| ![Progress](https://raw.githubusercontent.com/Gu1L3RM3/paper-trace/main/docs/img/ui-progress.png) | ![Verification](https://raw.githubusercontent.com/Gu1L3RM3/paper-trace/main/docs/img/ui-verification.png) |
 
 Synthesis with citations, and the mobile layout:
 
 | Synthesis | Mobile |
 |---|---|
-| ![Synthesis](docs/img/ui-synthesis.png) | ![Mobile](docs/img/ui-mobile.png) |
+| ![Synthesis](https://raw.githubusercontent.com/Gu1L3RM3/paper-trace/main/docs/img/ui-synthesis.png) | ![Mobile](https://raw.githubusercontent.com/Gu1L3RM3/paper-trace/main/docs/img/ui-mobile.png) |
 
 ## API
 
@@ -382,4 +388,4 @@ and claims verified in parallel batches to cut latency.
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+MIT, see [LICENSE](https://github.com/Gu1L3RM3/paper-trace/blob/main/LICENSE).
