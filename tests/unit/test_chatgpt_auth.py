@@ -16,6 +16,7 @@ from papertrace.llm.chatgpt_auth import (
     SCOPE,
     TOKEN_URL,
     ChatGPTAuth,
+    SignInRetry,
 )
 
 REDIRECT = "http://127.0.0.1:8000/auth/callback"
@@ -162,14 +163,44 @@ async def test_missing_plan_scope_is_reported_and_not_saved(tmp_path: Path) -> N
 @respx.mock
 async def test_token_endpoint_error_relays_only_the_error_code(tmp_path: Path) -> None:
     respx.post(TOKEN_URL).mock(
-        return_value=httpx.Response(400, json={"error": "invalid_grant", "detail": "rt-secret"})
+        return_value=httpx.Response(400, json={"error": "invalid_request", "detail": "rt-secret"})
     )
     async with httpx.AsyncClient() as http:
         auth = _auth(http, tmp_path / "c.json")
         state = _query(auth.authorize_url(REDIRECT))["state"]
-        with pytest.raises(LLMError, match="invalid_grant") as caught:
+        with pytest.raises(LLMError, match="invalid_request") as caught:
             await auth.finish_login(code="c", state=state, client_id="oaiapp_1")
     assert "rt-secret" not in str(caught.value)
+
+
+@respx.mock
+async def test_rejected_code_keeps_the_issued_client_and_retries_once(tmp_path: Path) -> None:
+    path = tmp_path / "c.json"
+    respx.post(TOKEN_URL).mock(return_value=httpx.Response(400, json={"error": "invalid_grant"}))
+    async with httpx.AsyncClient() as http:
+        auth = _auth(http, path)
+        state = _query(auth.authorize_url(REDIRECT))["state"]
+        with pytest.raises(SignInRetry) as retry:
+            await auth.finish_login(code="c", state=state, client_id="oaiapp_1")
+
+        # A fresh authorization with the same registration, never a new one.
+        params = _query(retry.value.url)
+        assert retry.value.url.startswith(AUTHORIZE_URL)
+        assert params["client_id"] == "oaiapp_1" and "agent_name_hint" not in params
+        assert params["redirect_uri"] == REDIRECT
+        assert json.loads(path.read_text())["client_id"] == "oaiapp_1"
+
+        with pytest.raises(LLMError, match="invalid_grant") as second:
+            await auth.finish_login(code="c2", state=params["state"], client_id=None)
+        assert not isinstance(second.value, SignInRetry)
+    assert not auth.connected
+
+
+async def test_pkce_verifier_matches_the_devkit_size(tmp_path: Path) -> None:
+    async with httpx.AsyncClient() as http:
+        auth = _auth(http, tmp_path / "c.json")
+        auth.authorize_url(REDIRECT)
+    assert auth._attempt is not None and len(auth._attempt.verifier) == 43
 
 
 @respx.mock

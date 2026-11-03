@@ -104,3 +104,18 @@ def test_session_that_ends_elsewhere_falls_back_on_next_request(client: TestClie
     app.state.chatgpt._login.tokens = None  # e.g. a terminal refresh error
 
     assert client.post("/api/research", json={"text": "q"}).status_code == 503
+
+
+def test_refused_code_sends_the_browser_to_a_fresh_sign_in(client: TestClient) -> None:
+    login = client.get("/auth/chatgpt/login")
+    state = parse_qs(urlsplit(login.headers["location"]).query)["state"][0]
+    respx.post(TOKEN_URL).mock(return_value=httpx.Response(400, json={"error": "invalid_grant"}))
+
+    callback = client.get(
+        "/auth/callback", params={"code": "c", "state": state, "client_id": "oaiapp_1"}
+    )
+
+    assert callback.status_code == 303
+    location = callback.headers["location"]
+    assert location.startswith(AUTHORIZE_URL)
+    assert parse_qs(urlsplit(location).query)["client_id"] == ["oaiapp_1"]

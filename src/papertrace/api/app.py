@@ -12,7 +12,7 @@ from sse_starlette import EventSourceResponse, ServerSentEvent
 from papertrace.api.dependencies import get_chatgpt, get_pipeline, rewire, wire
 from papertrace.domain.errors import LLMError
 from papertrace.domain.models import ResearchQuestion
-from papertrace.llm.chatgpt_auth import ChatGPTAuth
+from papertrace.llm.chatgpt_auth import ChatGPTAuth, SignInRetry
 from papertrace.pipeline import Pipeline
 from papertrace.settings import Settings
 
@@ -70,6 +70,8 @@ async def chatgpt_callback(
     else:
         try:
             await auth.finish_login(code=code, state=state, client_id=client_id)
+        except SignInRetry as retry:
+            return RedirectResponse(retry.url, status_code=303)
         except LLMError as exc:
             problem = str(exc)
         rewire(request.app.state)
