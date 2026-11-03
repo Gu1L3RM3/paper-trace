@@ -19,7 +19,17 @@
       <img src="assets/papertrace-mark.png" alt="" width="44" height="44">
       <span>PaperTrace<span class="brand-ai">AI</span></span>
     </a>
-    <div class="masthead-right"><span class="edition">A research workspace</span><a href="#method">The method <span aria-hidden="true">↗</span></a></div>
+    <div class="masthead-right">
+      <span class="edition">A research workspace</span><a class="method-link" href="#method">The method <span aria-hidden="true">↗</span></a>
+      <div class="account">
+        <a id="chatgpt-connect" href="/auth/chatgpt/login">Connect ChatGPT <span aria-hidden="true">↗</span><span class="sr-only"> — use your ChatGPT plan for research</span></a>
+        <p id="chatgpt-connected" hidden>
+          <span class="trace-dot" aria-hidden="true"></span>
+          <span class="account-label">ChatGPT<span id="chatgpt-email" class="account-email"></span></span>
+          <button type="button" id="chatgpt-disconnect" aria-label="Disconnect ChatGPT">Disconnect<span class="phone-only"> ChatGPT</span></button>
+        </p>
+      </div>
+    </div>
   </header>
   <main>
     <div class="workspace">

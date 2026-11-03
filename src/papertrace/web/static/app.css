@@ -35,6 +35,14 @@ button { cursor: pointer; }
 .masthead-right a { color: var(--ink); text-decoration: none; }
 .masthead-right a:hover { text-decoration: underline; }
 .edition { color: var(--muted); }
+.account { display: flex; align-items: center; }
+#chatgpt-connect, #chatgpt-connected { display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; margin: 0; padding: .5rem .875rem; border: 1px solid var(--rule); border-radius: 3px; background: var(--surface); }
+.masthead-right #chatgpt-connect { font-weight: 600; }
+.masthead-right #chatgpt-connect:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+.account-email { color: var(--muted); margin-left: .5rem; max-width: 18ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: bottom; }
+#chatgpt-disconnect { padding: 0 0 0 .75rem; margin-left: .25rem; border: 0; border-left: 1px solid var(--rule); background: none; color: var(--cite); font-size: inherit; text-decoration: underline; text-underline-offset: .2em; }
+#chatgpt-disconnect:hover { color: var(--bad); }
+.phone-only { display: none; }
 .workspace { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 4rem; padding-block: 4.5rem 2rem; }
 .margin-note { border-right: 1px solid var(--rule); padding-right: 2rem; display: flex; flex-direction: column; align-items: flex-start; font-size: .8rem; color: var(--muted); }
 .margin-kicker { font-size: .6rem; font-weight: 600; letter-spacing: .1em; display: flex; align-items: center; gap: .5rem; color: var(--accent); }
@@ -144,6 +152,10 @@ blockquote { margin: .75rem 0 0; padding: .5rem .75rem; border-left: 1px solid v
   .brand { font-size: 1.5rem; gap: .25rem; }
   .brand img { width: 36px; height: 36px; }
   .masthead-right { font-size: .7rem; }
+  .method-link, .account-label { display: none !important; }
+  .phone-only { display: inline; }
+  #chatgpt-connect, #chatgpt-connected { padding-inline: .625rem; }
+  #chatgpt-disconnect { padding-left: 0; margin-left: 0; border-left: 0; text-align: left; }
   .workspace { padding-top: 2rem; }
   h1 { font-size: 2.75rem; }
   .intro-copy { font-size: .875rem; }
