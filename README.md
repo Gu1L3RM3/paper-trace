@@ -37,7 +37,8 @@ what is claimed. PaperTrace attacks that failure at three points:
    quote from a paper's abstract. Code matches every quote to the abstract's own sentence; a claim it
    cannot ground is shown as **not verified** instead of being trusted.
 
-It is a local portfolio project: no deployment, auth or persistence.
+It is a local portfolio project: no deployment, user accounts or research history. The only sign-in
+is the optional local "Connect ChatGPT".
 
 ## Quick start
 
@@ -45,11 +46,27 @@ Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync
-cp .env.example .env     # set LLM_API_KEY and LLM_MODEL
+cp .env.example .env     # set LLM_MODEL, and LLM_API_KEY unless you connect ChatGPT
 uv run papertrace        # API + UI on http://127.0.0.1:8000
 ```
 
 Missing configuration stops the command at startup and names the variables to set.
+
+### Use your ChatGPT plan instead of an API key
+
+Click **Connect ChatGPT** in the top right corner. PaperTrace runs OpenAI's
+[Sign in with ChatGPT](https://developers.openai.com/siwc) flow for local open-source apps (OAuth with
+PKCE, callback on `http://127.0.0.1:<port>/auth/callback`). Research then draws on your plan's
+allowance through the Responses API instead of API credits.
+
+- A connected account takes precedence over `LLM_API_KEY`. **Disconnect** revokes the session and
+  switches back to the key, if one is set.
+- Tokens stay on the server in `~/.config/papertrace/chatgpt.json` (mode 0600) and never reach the
+  browser. The file keeps the app registration and host ID, so later sign-ins reuse them.
+- `LLM_MODEL` and the per-agent overrides must name models your plan offers. `LLM_BASE_URL` is
+  ignored, because plan usage is only served by api.openai.com.
+- OpenAI allows plan usage only in apps that run locally. Open the app on the same machine, from
+  `127.0.0.1` or `localhost`. Usage limits are shared with ChatGPT and other connected apps.
 
 ## How it works
 
@@ -263,7 +280,8 @@ Read through `pydantic-settings`; see `.env.example`.
 
 | Variable | Purpose |
 |---|---|
-| `LLM_API_KEY`, `LLM_MODEL` | required |
+| `LLM_MODEL` | required |
+| `LLM_API_KEY` | required unless you click **Connect ChatGPT**; a connected account takes precedence |
 | `ORCHESTRATOR_MODEL`, `SYNTHESIS_MODEL`, `VERIFICATION_MODEL` | per-agent overrides; verification defaults to the synthesis model |
 | `VERIFICATION_REASONING_EFFORT` | optional `none`...`xhigh`; applies to the verifier only |
 | `VERIFICATION_API` | `chat` (default) or `responses`; models such as `gpt-6.1-terra` take tools only on the Responses API |
@@ -322,7 +340,9 @@ UI with simulated SSE at four widths.
 - Verification is **abstract-only**: abstracts can be partial or missing, and a claim supported by the
   full text may look unsupported.
 - Citations are matched by first-author surname and year only.
-- The synthesis text arrives whole, not token by token. No cache, persistence or auth.
+- The synthesis text arrives whole, not token by token. No cache or research history.
+- ChatGPT sign-in holds one account per server. Its tests use mocked OpenAI responses built from the
+  documentation; it has not yet been run end to end with a real plan.
 - Quote matching is lexical: a paraphrase is matched to the abstract sentence that shares most of its
   words, so a loosely related sentence can be shown as evidence. The reader always sees real abstract text.
 - A run takes 1-2 minutes, mostly verification and the revision.

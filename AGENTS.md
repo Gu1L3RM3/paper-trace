@@ -64,7 +64,8 @@ Additional rules:
 
 ## Environment
 
-Variables (see `.env.example`): `LLM_API_KEY`, `LLM_MODEL`, optional `LLM_BASE_URL`,
+Variables (see `.env.example`): `LLM_MODEL`, optional `LLM_API_KEY` (not needed once the user
+clicks "Connect ChatGPT", which signs in with ChatGPT and spends their plan), `LLM_BASE_URL`,
 `ORCHESTRATOR_MODEL`, `SYNTHESIS_MODEL`, `VERIFICATION_MODEL`, `LLM_MAX_CONCURRENCY`,
 `OPENALEX_MAILTO`.
 Never commit `.env`. Never print or log keys.
@@ -100,7 +101,7 @@ Testing rules:
 ## Scope guard (v1)
 
 Do not add, without explicit approval: data sources besides OpenAlex and Semantic Scholar,
-full-text verification, persistence, auth, deploy configuration, frontend frameworks or build steps. Propose them as v2.
+full-text verification, persistence, user accounts (beyond the local ChatGPT sign-in), deploy configuration, frontend frameworks or build steps. Propose them as v2.
 
 ## Git and commits
 
