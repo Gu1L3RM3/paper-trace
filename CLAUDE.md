@@ -53,7 +53,10 @@ When proposing or reviewing code, name the principle a design choice serves if i
   still depend on the `LLMClient` port, never on the SDK, which is the sole vendor dependency.
 - Switching model is a `.env` change: `LLM_API_KEY`, `LLM_MODEL`, optional `ORCHESTRATOR_MODEL` /
   `SYNTHESIS_MODEL` / `VERIFICATION_MODEL`, `LLM_MAX_CONCURRENCY`. `LLM_BASE_URL` is only for an
-  OpenAI-compatible gateway.
+  OpenAI-compatible gateway. `LLM_API_KEY` is optional: the masthead's "Connect ChatGPT" runs
+  OpenAI's Sign in with ChatGPT (`llm/chatgpt_auth.py`, token file `~/.config/papertrace/chatgpt.json`,
+  0600) and `ChatGPTPlanClient` spends the user's plan (`store=false`, `stream=true`, namespaced
+  tools). A connected account wins over the key; `api/dependencies.py:rewire` swaps the pipeline.
 - Structured output always via forced tool calling into a Pydantic model.
 - Parallel work: `asyncio.gather` over real async I/O, bounded by the shared semaphore.
 - Read settings through `pydantic-settings`, never `os.environ`.
@@ -87,7 +90,7 @@ When proposing or reviewing code, name the principle a design choice serves if i
 ## Scope (v1)
 
 OpenAlex, Semantic Scholar and abstract-only verification only. No full-text verification,
-persistence, auth, deploy, or frontend framework. `VERIFICATION_MODEL` defaults to the effective synthesis model.
+persistence, user accounts, deploy, or frontend framework (the only sign-in is the local ChatGPT one). `VERIFICATION_MODEL` defaults to the effective synthesis model.
 Ask before expanding scope; propose extras as v2 in the README roadmap.
 
 ## Commits and branches
