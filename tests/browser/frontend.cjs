@@ -58,9 +58,15 @@ Unsafe $\href{javascript:alert(1)}{click}$ and $\includegraphics{https://example
       if (mode === "interrupted") body = ev("plan", plan);
       await route.fulfill({status:200, contentType:"text/event-stream", body});
     });
+    let connected = false;
+    await page.route("**/api/auth/chatgpt", route => route.fulfill({json: {connected, email: connected ? "reader.with.a.long.address@example.org" : null, error: null}}));
     for (const [name,width,height] of [["desktop",1440,1050],["tablet",768,1024],["mobile",390,844],["small",320,812]]) {
       await page.setViewportSize({width,height});
-      await page.goto(base);
+      for (connected of [true, false]) {
+        await page.goto(base);
+        await page.locator(connected ? "#chatgpt-disconnect" : "#chatgpt-connect").waitFor();
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+      }
       assert.equal(await page.locator(".brand img").evaluate(i => i.complete && i.naturalWidth > 0),true);
       await page.screenshot({path:path.join(out, name+"-initial.png"),fullPage:true});
       await page.getByRole("button", {name:"Does intermittent fasting improve memory?"}).click();
