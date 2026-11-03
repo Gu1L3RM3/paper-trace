@@ -21,7 +21,9 @@ uv run ruff check --fix . && uv run ruff format .
 uv run mypy
 uv run pre-commit run --all-files
 uv run python tools/prompt_eval/run.py --out report.html   # prompt/tool/schema lint + 12 live cases
-uv run papertrace                  # serves API + UI on 127.0.0.1:8000
+uv run papertrace                  # API + UI on 127.0.0.1:8000 (or next free port), opens browser
+uvx --from . papertrace            # what users run: the installed package, zero config
+# Release: bump version in pyproject.toml, tag vX.Y.Z on main -> .github/workflows/publish.yml
 uv run uvicorn papertrace.api.app:app --reload   # dev server with reload
 ```
 

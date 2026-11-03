@@ -1,0 +1,26 @@
+name: publish
+
+# Push a tag such as v0.2.0 to publish that version to PyPI, so users can run `uvx papertrace`.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # PyPI trusted publishing: no API token is stored in the repository.
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Tag matches the package version
+        run: test "${GITHUB_REF_NAME#v}" = "$(uv version --short)"
+      - run: uv sync --locked
+      - run: uv run pytest
+      - run: uv build
+      - run: uv publish --trusted-publishing always

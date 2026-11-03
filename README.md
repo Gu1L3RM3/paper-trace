@@ -40,17 +40,42 @@ what is claimed. PaperTrace attacks that failure at three points:
 It is a local portfolio project: no deployment, user accounts or research history. The only sign-in
 is the optional local "Connect ChatGPT".
 
-## Quick start
+## Install and run
 
-Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
+Everything runs on your computer. First install [uv](https://docs.astral.sh/uv/getting-started/installation/),
+which also installs Python for you:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh                          # Linux and macOS
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"   # Windows
+```
+
+Then start PaperTrace:
+
+```bash
+uvx papertrace
+```
+
+The browser opens on the app (`http://127.0.0.1:8000`, or the next free port). Click
+**Connect ChatGPT** to research with your ChatGPT plan; no configuration is needed. Stop it with
+Ctrl+C. `uvx papertrace@latest` updates it.
+
+Until the first PyPI release, install from GitHub instead:
+`uvx --from git+https://github.com/Gu1L3RM3/paper-trace papertrace`.
+
+Optional settings (an API key, other models) go in `~/.config/papertrace/config.env`, using the
+variables from [Configuration](#configuration). A `.env` in the folder where you start the app
+overrides that file.
+
+### From source
 
 ```bash
 uv sync
-cp .env.example .env     # set LLM_MODEL, and LLM_API_KEY unless you connect ChatGPT
-uv run papertrace        # API + UI on http://127.0.0.1:8000
+cp .env.example .env     # optional: LLM_API_KEY, model overrides
+uv run papertrace
 ```
 
-Missing configuration stops the command at startup and names the variables to set.
+Invalid configuration stops the command at startup and names the variables to fix.
 
 ### Use your ChatGPT plan instead of an API key
 
@@ -276,12 +301,13 @@ uv run python -m papertrace.cli "O jejum intermitente melhora a memória?"
 
 ## Configuration
 
-Read through `pydantic-settings`; see `.env.example`.
+Read through `pydantic-settings` from `~/.config/papertrace/config.env`, then `.env` in the working
+folder, then environment variables (each overrides the previous); see `.env.example`.
 
 | Variable | Purpose |
 |---|---|
-| `LLM_MODEL` | required |
-| `LLM_API_KEY` | required unless you click **Connect ChatGPT**; a connected account takes precedence |
+| `LLM_MODEL` | default model for every agent (default `gpt-5.4-mini`) |
+| `LLM_API_KEY` | only without **Connect ChatGPT**; a connected account takes precedence |
 | `ORCHESTRATOR_MODEL`, `SYNTHESIS_MODEL`, `VERIFICATION_MODEL` | per-agent overrides; verification defaults to the synthesis model |
 | `VERIFICATION_REASONING_EFFORT` | optional `none`...`xhigh`; applies to the verifier only |
 | `VERIFICATION_API` | `chat` (default) or `responses`; models such as `gpt-6.1-terra` take tools only on the Responses API |

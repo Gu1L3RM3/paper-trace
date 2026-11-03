@@ -2,6 +2,7 @@
 name = "papertrace"
 version = "0.1.0"
 description = "Multi-agent research assistant that cites only the papers it actually retrieved."
+readme = "README.md"
 authors = [
     { name = "Guilherme Abreu Cavazzani", email = "104440257+Gu1L3RM3@users.noreply.github.com" }
 ]
@@ -15,6 +16,9 @@ dependencies = [
     "sse-starlette>=3.6.0",
     "uvicorn[standard]>=0.54.0",
 ]
+
+[project.urls]
+Source = "https://github.com/Gu1L3RM3/paper-trace"
 
 [project.scripts]
 papertrace = "papertrace.server:main"
