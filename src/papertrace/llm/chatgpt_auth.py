@@ -64,6 +64,15 @@ class _Attempt:
     verifier: str
     nonce: str
     redirect_uri: str
+    retry: bool = False
+
+
+class SignInRetry(LLMError):
+    """The code was refused; the browser should go to `url`, a fresh authorization."""
+
+    def __init__(self, url: str) -> None:
+        super().__init__("ChatGPT refused the sign-in code; starting a fresh sign-in.")
+        self.url = url
 
 
 class _TokenError(LLMError):
@@ -93,12 +102,12 @@ class ChatGPTAuth:
     def email(self) -> str | None:
         return self._login.tokens.email if self._login.tokens else None
 
-    def authorize_url(self, redirect_uri: str) -> str:
-        verifier = secrets.token_urlsafe(64)
+    def authorize_url(self, redirect_uri: str, *, retry: bool = False) -> str:
+        verifier = secrets.token_urlsafe(32)  # 43 characters, as OpenAI's devkit uses
         challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest())
         # shortcut: only the latest attempt is kept, so an older open sign-in tab fails.
         self._attempt = _Attempt(
-            secrets.token_urlsafe(32), verifier, secrets.token_urlsafe(32), redirect_uri
+            secrets.token_urlsafe(32), verifier, secrets.token_urlsafe(32), redirect_uri, retry
         )
         params = {
             "client_id": self._login.client_id or _REGISTRATION,
@@ -125,6 +134,9 @@ class ChatGPTAuth:
         client = client_id or self._login.client_id
         if client is None:
             raise LLMError(f"ChatGPT did not return a client ID. {_CONNECT}")
+        # Keep the registration even if the exchange fails, so a retry never registers again.
+        self._login.client_id = client
+        self._save()
         try:
             body = await self._token(
                 grant_type="authorization_code",
@@ -134,13 +146,14 @@ class ChatGPTAuth:
                 redirect_uri=attempt.redirect_uri,
             )
         except _TokenError as exc:
+            # A code can be refused right after registration; OpenAI's devkit retries once.
+            if exc.code == "invalid_grant" and not attempt.retry:
+                raise SignInRetry(self.authorize_url(attempt.redirect_uri, retry=True)) from exc
             raise LLMError(f"{exc} {_CONNECT}") from exc
         claims = _claims(body.get("id_token"))
         if claims.get("nonce") != attempt.nonce or claims.get("aud") not in (client, [client]):
             raise LLMError(f"ChatGPT returned an ID token for another sign-in. {_CONNECT}")
-        self._login.client_id = client
         if _PLAN_SCOPE not in str(body.get("scope", "")).split():
-            self._save()
             raise LLMError(
                 "ChatGPT plan usage was not granted for PaperTrace. Allow it when signing in, "
                 "or set LLM_API_KEY."
