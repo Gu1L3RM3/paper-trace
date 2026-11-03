@@ -10,7 +10,8 @@ class Settings(BaseSettings):
     # The example env file ships empty values; treat them as unset.
     model_config = SettingsConfigDict(env_file=".env", env_ignore_empty=True, extra="ignore")
 
-    llm_api_key: SecretStr
+    # Optional: a user who connects ChatGPT in the UI spends their plan instead.
+    llm_api_key: SecretStr | None = None
     llm_model: str
     # Only for an OpenAI-compatible gateway or proxy; None means the OpenAI API.
     llm_base_url: str | None = None

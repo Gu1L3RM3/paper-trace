@@ -14,7 +14,7 @@ def test_missing_configuration_prints_friendly_error(
     monkeypatch.chdir(tmp_path)  # no env file to pick up
 
     assert server.main() == 1
-    assert "LLM_API_KEY" in capsys.readouterr().err
+    assert "LLM_MODEL" in capsys.readouterr().err
 
 
 def test_main_starts_uvicorn_on_localhost(monkeypatch: pytest.MonkeyPatch) -> None:
