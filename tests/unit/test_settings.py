@@ -1,13 +1,12 @@
 from typing import Any
 
 import pytest
-from pydantic import ValidationError
 
 from papertrace.domain.errors import LLMError
 from papertrace.llm.chatgpt_plan import ChatGPTPlanClient
 from papertrace.llm.openai_client import OpenAIClient, build_llm_client
 from papertrace.llm.openai_responses import OpenAIResponsesClient
-from papertrace.settings import Settings
+from papertrace.settings import CONFIG_DIR, Settings
 
 
 def _settings(**overrides: Any) -> Settings:
@@ -15,10 +14,14 @@ def _settings(**overrides: Any) -> Settings:
     return Settings(_env_file=None, **values)
 
 
-def test_model_is_required_and_the_api_key_optional_for_chatgpt_sign_in() -> None:
-    assert _settings(llm_api_key=None).llm_api_key is None
-    with pytest.raises(ValidationError, match="llm_model"):
-        _settings(llm_model=None)
+def test_nothing_is_required_to_start() -> None:
+    settings = Settings(_env_file=None)
+    assert settings.llm_api_key is None
+    assert settings.llm_model == "gpt-5.4-mini"
+
+
+def test_user_config_file_is_read_before_the_local_env_file() -> None:
+    assert Settings.model_config["env_file"] == (CONFIG_DIR / "config.env", ".env")
 
 
 def test_per_agent_model_overrides_default() -> None:

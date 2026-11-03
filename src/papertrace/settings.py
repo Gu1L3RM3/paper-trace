@@ -1,18 +1,24 @@
+from pathlib import Path
 from typing import Literal
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ReasoningEffort = Literal["none", "minimal", "low", "medium", "high", "xhigh"]
+# Per-user files for an installed app (uvx/pipx), which has no project folder.
+CONFIG_DIR = Path.home() / ".config" / "papertrace"
 
 
 class Settings(BaseSettings):
+    # The user file applies everywhere; a .env in the working folder overrides it.
     # The example env file ships empty values; treat them as unset.
-    model_config = SettingsConfigDict(env_file=".env", env_ignore_empty=True, extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(CONFIG_DIR / "config.env", ".env"), env_ignore_empty=True, extra="ignore"
+    )
 
     # Optional: a user who connects ChatGPT in the UI spends their plan instead.
     llm_api_key: SecretStr | None = None
-    llm_model: str
+    llm_model: str = "gpt-5.4-mini"
     # Only for an OpenAI-compatible gateway or proxy; None means the OpenAI API.
     llm_base_url: str | None = None
     orchestrator_model: str | None = None

@@ -5,6 +5,7 @@ import pytest
 
 from papertrace.cli import format_papers, main
 from papertrace.domain.models import Paper
+from papertrace.settings import Settings
 
 
 def test_format_papers_lists_authors_year_and_link() -> None:
@@ -32,16 +33,15 @@ def test_blank_author_name_does_not_crash() -> None:
     assert format_papers([paper]) == "1. T (Unknown, 2020)\n   https://u"
 
 
-def test_missing_configuration_prints_friendly_error(
+def test_missing_api_key_prints_friendly_error(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
 ) -> None:
-    for var in ("LLM_MODEL", "LLM_API_KEY"):
-        monkeypatch.delenv(var, raising=False)
-    monkeypatch.chdir(tmp_path)  # no env file to pick up
+    monkeypatch.delenv("LLM_API_KEY", raising=False)
+    monkeypatch.setitem(Settings.model_config, "env_file", None)  # no env files to pick up
     monkeypatch.setattr(sys, "argv", ["papertrace", "question"])
 
     assert main() == 1
-    assert "LLM_MODEL" in capsys.readouterr().err.upper()
+    assert "LLM_API_KEY" in capsys.readouterr().err
 
 
 async def test_cli_searches_both_sources(
