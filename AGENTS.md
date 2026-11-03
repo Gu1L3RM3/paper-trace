@@ -64,7 +64,8 @@ Additional rules:
 
 ## Environment
 
-Variables (see `.env.example`): `LLM_MODEL`, optional `LLM_API_KEY` (not needed once the user
+Variables (see `.env.example`, also read from `~/.config/papertrace/config.env`): `LLM_MODEL`
+(default `gpt-5.4-mini`), optional `LLM_API_KEY` (not needed once the user
 clicks "Connect ChatGPT", which signs in with ChatGPT and spends their plan), `LLM_BASE_URL`,
 `ORCHESTRATOR_MODEL`, `SYNTHESIS_MODEL`, `VERIFICATION_MODEL`, `LLM_MAX_CONCURRENCY`,
 `OPENALEX_MAILTO`.
