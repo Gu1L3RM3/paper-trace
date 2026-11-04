@@ -39,8 +39,13 @@ what is claimed. PaperTrace attacks that failure at three points:
    quote from a paper's abstract. Code matches every quote to the abstract's own sentence; a claim it
    cannot ground is shown as **not verified** instead of being trusted.
 
-It is a local portfolio project: no deployment, user accounts or research history. The only sign-in
-is the optional local "Connect ChatGPT".
+It is a local portfolio project: no deployment or user accounts. The only sign-in is the optional
+local "Connect ChatGPT".
+
+Every research is kept in a local history. **Past research**, below the examples, lists them, and
+opening one shows it exactly as it was, without searching or calling the model again. The history lives
+in `~/.config/papertrace/history.sqlite3` (mode 0600), never leaves your computer, and each entry can
+be deleted.
 
 ## Install and run
 
@@ -377,7 +382,8 @@ that keep the version publish nothing.
 - Verification is **abstract-only**: abstracts can be partial or missing, and a claim supported by the
   full text may look unsupported.
 - Citations are matched by first-author surname and year only.
-- The synthesis text arrives whole, not token by token. No cache or research history.
+- The synthesis text arrives whole, not token by token. No cache: asking the same question again runs a
+  new search. History is per computer and has no search or export.
 - ChatGPT sign-in holds one account per server. Its tests use mocked OpenAI responses built from the
   documentation; it has not yet been run end to end with a real plan.
 - Quote matching is lexical: a paraphrase is matched to the abstract sentence that shares most of its
@@ -388,7 +394,7 @@ that keep the version publish nothing.
 - Semantic Scholar has no retry; anonymous use can hit rate limits.
 
 Ideas for a next version: arXiv and Crossref sources with cross-source verification, full-text
-verification, persisted sessions, BibTeX and Markdown export, semantic re-ranking of papers, verifying
+verification, follow-up questions on a past research, BibTeX and Markdown export, semantic re-ranking of papers, verifying
 and claims verified in parallel batches to cut latency.
 
 ## License
