@@ -102,7 +102,7 @@ Testing rules:
 ## Scope guard (v1)
 
 Do not add, without explicit approval: data sources besides OpenAlex and Semantic Scholar,
-full-text verification, persistence, user accounts (beyond the local ChatGPT sign-in), deploy configuration, frontend frameworks or build steps. Propose them as v2.
+full-text verification, persistence beyond the local research history (`history.py`), user accounts (beyond the local ChatGPT sign-in), deploy configuration, frontend frameworks or build steps. Propose them as v2.
 
 ## Git and commits
 
