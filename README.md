@@ -106,21 +106,15 @@ allowance through the Responses API instead of API credits.
 
 ## How it works
 
-```mermaid
-flowchart LR
-    Q[Question PT/EN] --> O[Orchestrator<br/>forced tool call]
-    O -->|2-4 English queries| R[Research<br/>no LLM]
-    R -->|parallel| OA[(OpenAlex)]
-    R -->|parallel| SS[(Semantic Scholar)]
-    OA --> D[Dedup by DOI]
-    SS --> D
-    D -->|papers| S[Synthesis]
-    S -->|draft + citation check| V[Verification<br/>forced tool call]
-    V -->|issues found| RV[Revise once]
-    RV --> V2[Re-verify]
-    V -->|no issues| Done((done))
-    V2 --> Done
-```
+1. **Question (PT/EN)** goes to the **Orchestrator**, which plans 2-4 English search queries via a
+   forced tool call.
+2. **Research** (no LLM) runs those queries in parallel against **OpenAlex** and **Semantic Scholar**,
+   then dedups the results by DOI.
+3. The deduplicated papers go to **Synthesis**, which writes the draft and runs a citation check.
+4. **Verification** (forced tool call) audits the draft against the papers.
+   - If issues are found, the draft goes through one **revision**, then a **re-verification**, and
+     the run ends.
+   - If no issues are found, the run ends right away.
 
 | Stage | Agent | Input | Output | Uses LLM |
 |---|---|---|---|---|
@@ -384,8 +378,6 @@ that keep the version publish nothing.
 - Citations are matched by first-author surname and year only.
 - The synthesis text arrives whole, not token by token. No cache: asking the same question again runs a
   new search. History is per computer and has no search or export.
-- ChatGPT sign-in holds one account per server. Its tests use mocked OpenAI responses built from the
-  documentation; it has not yet been run end to end with a real plan.
 - Quote matching is lexical: a paraphrase is matched to the abstract sentence that shares most of its
   words, so a loosely related sentence can be shown as evidence. The reader always sees real abstract text.
 - A run takes 1-2 minutes, mostly verification and the revision.
