@@ -4,14 +4,15 @@ from pathlib import Path
 from typing import Annotated
 
 import httpx
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sse_starlette import EventSourceResponse, ServerSentEvent
 
-from papertrace.api.dependencies import get_chatgpt, get_pipeline, rewire, wire
+from papertrace.api.dependencies import get_chatgpt, get_history, get_pipeline, rewire, wire
 from papertrace.domain.errors import LLMError
 from papertrace.domain.models import ResearchQuestion
+from papertrace.history import HistoryEntry, SavedEvent, SQLiteHistory
 from papertrace.llm.chatgpt_auth import ChatGPTAuth, SignInRetry
 from papertrace.pipeline import Pipeline
 from papertrace.settings import Settings
@@ -34,14 +35,46 @@ def health() -> dict[str, str]:
 
 @app.post("/api/research")
 async def research(
-    question: ResearchQuestion, pipeline: Annotated[Pipeline, Depends(get_pipeline)]
+    question: ResearchQuestion,
+    pipeline: Annotated[Pipeline, Depends(get_pipeline)],
+    history: Annotated[SQLiteHistory, Depends(get_history)],
 ) -> EventSourceResponse:
     async def events() -> AsyncIterator[ServerSentEvent]:
-        async for event in pipeline.run(question):
-            data = event.payload.model_dump_json() if event.payload is not None else "{}"
-            yield ServerSentEvent(data=data, event=event.name)
+        saved: list[SavedEvent] = []
+        try:
+            async for event in pipeline.run(question):
+                data = event.payload.model_dump_json() if event.payload is not None else "{}"
+                saved.append(SavedEvent(event=event.name, data=data))
+                yield ServerSentEvent(data=data, event=event.name)
+        finally:
+            # Also runs when the browser leaves mid-run; one local insert, so a sync call is fine.
+            if saved:
+                history.save(question.text, saved)
 
     return EventSourceResponse(events())
+
+
+@app.get("/api/history")
+def history_entries(history: Annotated[SQLiteHistory, Depends(get_history)]) -> list[HistoryEntry]:
+    return history.entries()
+
+
+@app.get("/api/history/{research_id}")
+def history_events(
+    research_id: int, history: Annotated[SQLiteHistory, Depends(get_history)]
+) -> list[SavedEvent]:
+    events = history.events(research_id)
+    if events is None:
+        raise HTTPException(status_code=404, detail="This research is not in the history.")
+    return events
+
+
+@app.delete("/api/history/{research_id}", status_code=204)
+def history_delete(
+    research_id: int, history: Annotated[SQLiteHistory, Depends(get_history)]
+) -> None:
+    if not history.delete(research_id):
+        raise HTTPException(status_code=404, detail="This research is not in the history.")
 
 
 @app.get("/auth/chatgpt/login")
