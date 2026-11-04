@@ -35,6 +35,7 @@ uv run uvicorn papertrace.api.app:app --reload   # dev server with reload
 - `src/papertrace/sources/` — `PaperSource` port, `OpenAlexSource`.
 - `src/papertrace/agents/` — Orchestrator, Research, Synthesis, Verification (ports only).
 - `src/papertrace/server.py` — `papertrace` console script, checks settings before starting.
+- `src/papertrace/history.py` — `SQLiteHistory`: each run's question and exact SSE events, replayed by the UI.
 - `src/papertrace/pipeline.py` — runs the stages, yields `StageEvent`s.
 - `src/papertrace/api/` — FastAPI, SSE, `dependencies.py` = composition root.
 - `src/papertrace/web/static/` — vanilla frontend (`index.html`, `app.css`, `app.js`), mounted last in `api/app.py`.
@@ -93,7 +94,9 @@ When proposing or reviewing code, name the principle a design choice serves if i
 ## Scope (v1)
 
 OpenAlex, Semantic Scholar and abstract-only verification only. No full-text verification,
-persistence, user accounts, deploy, or frontend framework (the only sign-in is the local ChatGPT one). `VERIFICATION_MODEL` defaults to the effective synthesis model.
+server-side persistence beyond the local research history (`history.py`, SQLite in
+`~/.config/papertrace`), user accounts, deploy, or frontend framework (the only sign-in is the local
+ChatGPT one). `VERIFICATION_MODEL` defaults to the effective synthesis model.
 Ask before expanding scope; propose extras as v2 in the README roadmap.
 
 ## Commits and branches
