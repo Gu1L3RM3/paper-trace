@@ -117,6 +117,21 @@ sup.ref a { font: .65rem var(--sans); text-decoration: none; padding-inline: .15
 .partially_supported .verdict, .unverified .verdict { color: var(--warn); }
 .contradicted .verdict, .unsupported .verdict { color: var(--bad); }
 blockquote { margin: .75rem 0 0; padding: .5rem .75rem; border-left: 1px solid var(--rule); font: .9375rem/1.6 var(--serif); }
+.history-line { margin: 0 0 1rem; }
+#history-open { padding: 0; border: 0; background: none; color: var(--cite); font-size: .75rem; text-decoration: underline; text-underline-offset: .2em; min-height: 44px; }
+#history-count { color: var(--muted); }
+#history { width: min(640px, calc(100% - 2rem)); max-height: min(80vh, 720px); padding: 1.5rem; border: 1px solid var(--rule); border-radius: 3px; background: var(--surface); color: var(--ink); }
+#history::backdrop { background: #152d3b59; }
+.history-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.history-head h2 { margin: 0; font: 400 1.5rem var(--serif); }
+#history-close, .history-delete { padding: 0; border: 0; background: none; color: var(--cite); font-size: .75rem; text-decoration: underline; text-underline-offset: .2em; min-height: 44px; }
+.history-delete:hover { color: var(--bad); }
+#history-list { list-style: none; margin: 1rem 0 0; padding: 0; }
+#history-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 1rem; padding-block: .75rem; border-top: 1px solid var(--rule); }
+.history-question { grid-column: 1; padding: 0; border: 0; background: none; color: var(--ink); text-align: left; font: 1rem/1.45 var(--serif); overflow-wrap: anywhere; }
+.history-question:hover { color: var(--accent); text-decoration: underline; text-underline-offset: .2em; }
+#history-list .meta { grid-column: 1; font-size: .7rem; color: var(--muted); }
+.history-delete { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
 #error { padding: 1rem 1.25rem; border-left: 3px solid var(--bad); background: #f9eeee; color: var(--bad); font-size: .875rem; margin: 1rem 0 2rem; overflow-wrap: anywhere; }
 .method { display: grid; grid-template-columns: 1fr 1.25fr; gap: 4rem; padding-block: 3rem 4rem; margin-top: 2rem; border-top: 1px solid var(--rule); }
 .method h2 { max-width: 20rem; font: 400 2.25rem/1.15 var(--serif); letter-spacing: -.025em; margin: .875rem 0 1.25rem; }

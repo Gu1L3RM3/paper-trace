@@ -59,6 +59,11 @@ Unsafe $\href{javascript:alert(1)}{click}$ and $\includegraphics{https://example
       await route.fulfill({status:200, contentType:"text/event-stream", body});
     });
     let connected = false;
+    const saved = [["plan", plan], ["papers", {papers:[paper], failed_queries:[]}], ["synthesis", synthesis],
+      ["verification", {reason:"Abstract-only assessment; inspect the original papers.", claims, findings:[], revision_count:0, status:"not_verifiable"}], ["done", {}]]
+      .map(([event, data]) => ({event, data: JSON.stringify(data)}));
+    await page.route("**/api/history", route => route.fulfill({json: [{id:1, question:"Does intermittent fasting improve memory in adults who also exercise regularly?", created_at:"2026-11-03T21:05:00+00:00", status:"complete"}]}));
+    await page.route("**/api/history/1", route => route.fulfill({json: saved}));
     await page.route("**/api/auth/chatgpt", route => route.fulfill({json: {connected, email: connected ? "reader.with.a.long.address@example.org" : null, error: null}}));
     for (const [name,width,height] of [["desktop",1440,1050],["tablet",768,1024],["mobile",390,844],["small",320,812]]) {
       await page.setViewportSize({width,height});
@@ -92,6 +97,22 @@ Unsafe $\href{javascript:alert(1)}{click}$ and $\includegraphics{https://example
       await reference.click();
       assert.match(await page.url(),/#paper-1$/);
       await page.screenshot({path:path.join(out,name+"-results.png"),fullPage:true});
+    }
+    for (const [name,width,height] of [["desktop",1440,1050],["small",320,812]]) {
+      await page.setViewportSize({width,height});
+      await page.goto(base);
+      await page.getByRole("button", {name:/Past research/}).click();
+      assert.equal(await page.locator("#history").evaluate(d=>d.open),true);
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+      await page.screenshot({path:path.join(out,name+"-history.png")});
+      await page.keyboard.press("Escape");
+      assert.equal(await page.locator("#history").evaluate(d=>d.open),false);
+      await page.getByRole("button", {name:/Past research/}).click();
+      await page.locator(".history-question").click();
+      await page.getByText(/^Saved research from /).waitFor();
+      assert.equal(await page.locator("#papers li").count(),1);
+      assert.equal(await page.locator("#synthesis .katex-display").count(),2);
+      assert.equal(await page.locator("#question").inputValue(),"Does intermittent fasting improve memory in adults who also exercise regularly?");
     }
     for (mode of ["success","empty","error","revision","loading","interrupted"]) {
       await page.goto(base);
