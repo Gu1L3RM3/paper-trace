@@ -61,6 +61,7 @@
           <button type="button" data-question="How does reinforcement learning improve robotic control?">Learning &amp; robotics <span aria-hidden="true">↗</span></button>
           <button type="button" data-question="What are the effects of urban green spaces on mental health?">Cities &amp; well-being <span aria-hidden="true">↗</span></button>
         </div>
+        <p class="history-line" hidden><button type="button" id="history-open" aria-haspopup="dialog">Past research <span id="history-count"></span></button></p>
         <div class="source-line"><span class="source-label">SEARCHING THE LITERATURE WITH</span><span>OpenAlex</span><span class="source-plus" aria-hidden="true">+</span><span>Semantic Scholar</span></div>
         <section class="research-trace" aria-label="Research progress">
           <ol class="steps">
@@ -84,6 +85,14 @@
         <section id="papers" class="result-section" hidden><h2><span class="section-index">02 /</span> Papers retrieved</h2></section>
       </aside>
     </div>
+    <dialog id="history" aria-labelledby="history-title">
+      <div class="history-head">
+        <h2 id="history-title">Past research</h2>
+        <button type="button" id="history-close">Close</button>
+      </div>
+      <p class="note">Saved on this computer only. Opening one shows it as it was, without searching again.</p>
+      <ol id="history-list"></ol>
+    </dialog>
     <section id="method" class="method" aria-labelledby="method-title">
       <div class="method-heading"><p class="eyebrow">THE METHOD</p><h2 id="method-title">Understanding, with a paper trail.</h2><p>Built for curiosity.<br>Designed to be questioned.</p></div>
       <div class="method-notes">
