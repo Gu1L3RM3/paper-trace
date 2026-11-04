@@ -367,6 +367,11 @@ Semantic Scholar data (no fabricated papers), concurrency proven with timing tes
 CI on ruff, mypy and pytest with coverage. A Playwright script (`tests/browser/frontend.cjs`) covers the
 UI with simulated SSE at four widths.
 
+Releases are continuous: when a merge to `main` carries a `version` in `pyproject.toml` that has no
+release yet, `.github/workflows/publish.yml` runs the tests, publishes to PyPI through trusted
+publishing (no token in the repository), then tags `vX.Y.Z` and creates the GitHub release. Merges
+that keep the version publish nothing.
+
 ## Limitations and roadmap
 
 - Verification is **abstract-only**: abstracts can be partial or missing, and a claim supported by the
