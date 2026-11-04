@@ -12,6 +12,7 @@ from papertrace.agents.multi_source import MultiSourceResearcher
 from papertrace.agents.orchestrator import OrchestratorAgent
 from papertrace.agents.synthesis import SynthesisAgent
 from papertrace.agents.verification import VerificationAgent
+from papertrace.history import SQLiteHistory
 from papertrace.llm.chatgpt_auth import ChatGPTAuth
 from papertrace.llm.openai_client import NO_CREDENTIALS, build_llm_client
 from papertrace.pipeline import Pipeline
@@ -20,6 +21,7 @@ from papertrace.sources.openalex import OpenAlexSource
 from papertrace.sources.semantic_scholar import SemanticScholarSource
 
 _CHATGPT_FILE = CONFIG_DIR / "chatgpt.json"
+_HISTORY_FILE = CONFIG_DIR / "history.sqlite3"
 
 
 def build_pipeline(
@@ -50,6 +52,7 @@ def wire(state: State, settings: Settings, http: httpx.AsyncClient) -> None:
     state.http = http
     state.chatgpt = ChatGPTAuth(http=http, path=_CHATGPT_FILE)
     state.chatgpt_error = None
+    state.history = SQLiteHistory(_HISTORY_FILE)
     rewire(state)
 
 
@@ -63,6 +66,11 @@ def rewire(state: State) -> None:
         state.pipeline = build_pipeline(state.settings, state.http)
     else:
         state.pipeline = None
+
+
+def get_history(request: Request) -> SQLiteHistory:
+    history: SQLiteHistory = request.app.state.history
+    return history
 
 
 def get_chatgpt(request: Request) -> ChatGPTAuth:

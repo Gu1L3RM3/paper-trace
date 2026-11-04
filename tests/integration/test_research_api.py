@@ -1,11 +1,12 @@
 import json
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
 from papertrace.api.app import app
-from papertrace.api.dependencies import get_pipeline
+from papertrace.api.dependencies import get_history, get_pipeline
 from papertrace.domain.errors import SourceError
 from papertrace.domain.models import (
     Paper,
@@ -16,6 +17,7 @@ from papertrace.domain.models import (
     SynthesisResult,
 )
 from papertrace.domain.verification import VerificationResult
+from papertrace.history import SQLiteHistory
 from papertrace.pipeline import Pipeline
 from tests.fakes import FakeVerifier
 
@@ -69,7 +71,9 @@ def _stream(client: TestClient) -> list[tuple[str, dict[str, object]]]:
 
 
 @pytest.fixture
-def client() -> Iterator[TestClient]:
+def client(tmp_path: Path) -> Iterator[TestClient]:
+    store = SQLiteHistory(tmp_path / "history.sqlite3")
+    app.dependency_overrides[get_history] = lambda: store
     yield TestClient(app)
     app.dependency_overrides.clear()
 
