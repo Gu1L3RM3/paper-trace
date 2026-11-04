@@ -252,12 +252,16 @@ async function ask(text) {
   if (!finished) throw new Error("Research stopped before completion. Please try again.");
 }
 
-$("ask").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const button = e.target.querySelector("button");
+function reset() {
   for (const id of ["plan", "papers", "synthesis", "verification", "error"]) $(id).hidden = true;
   papers = [];
   $("results").hidden = true;
+}
+
+$("ask").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const button = e.target.querySelector("button");
+  reset();
   button.disabled = true;
   document.body.dataset.researchState = "running";
   $("ask").setAttribute("aria-busy", "true");
@@ -271,11 +275,12 @@ $("ask").addEventListener("submit", async (e) => {
     button.disabled = false;
     $("ask").removeAttribute("aria-busy");
     button.querySelector("span").textContent = "Trace the evidence";
+    loadHistory();
   }
 });
 
 // ChatGPT sign-in lives on the server; the page only shows its state.
-function showSignInProblem(message) {
+function showProblem(message) {
   $("error").textContent = message;
   $("error").hidden = false;
 }
@@ -290,7 +295,7 @@ async function showAccount() {
   $("chatgpt-connect").hidden = account.connected;
   $("chatgpt-connected").hidden = !account.connected;
   $("chatgpt-email").textContent = account.email || "";
-  if (account.error) showSignInProblem(account.error);
+  if (account.error) showProblem(account.error);
 }
 
 $("chatgpt-disconnect").addEventListener("click", async () => {
@@ -302,7 +307,7 @@ $("chatgpt-disconnect").addEventListener("click", async () => {
       ? "ChatGPT disconnected."
       : "ChatGPT disconnected here, but OpenAI did not confirm it. You can also remove PaperTrace in ChatGPT Settings.";
   } catch {
-    showSignInProblem("Could not disconnect ChatGPT. Check that the server is running.");
+    showProblem("Could not disconnect ChatGPT. Check that the server is running.");
   } finally {
     button.disabled = false;
   }
@@ -311,3 +316,59 @@ $("chatgpt-disconnect").addEventListener("click", async () => {
 });
 
 showAccount();
+
+// Every run is saved by the server; a past one is replayed through the same renderers.
+const savedStatus = { error: "Stopped with an error", interrupted: "Interrupted before it finished" };
+const when = (iso) => new Date(iso).toLocaleString("en", { dateStyle: "medium", timeStyle: "short" });
+
+async function loadHistory() {
+  let entries = [];
+  try {
+    entries = await (await fetch("/api/history")).json();
+  } catch {
+    return;
+  }
+  document.querySelector(".history-line").hidden = !entries.length;
+  $("history-count").textContent = `(${entries.length})`;
+  $("history-list").replaceChildren(...entries.map((entry) => {
+    const li = el("li");
+    const open = el("button", entry.question, "history-question");
+    open.type = "button";
+    open.addEventListener("click", () => replay(entry));
+    const remove = el("button", "Delete", "history-delete");
+    remove.type = "button";
+    remove.setAttribute("aria-label", `Delete “${entry.question}”`);
+    remove.addEventListener("click", async () => {
+      await fetch(`/api/history/${entry.id}`, { method: "DELETE" }).catch(() => {});
+      await loadHistory();
+      const next = $("history-list").querySelector("button");
+      if (next) next.focus();
+      else $("history").close();
+    });
+    const meta = [when(entry.created_at), savedStatus[entry.status]].filter(Boolean).join(", ");
+    li.append(open, el("span", meta, "meta"), remove);
+    return li;
+  }));
+}
+
+async function replay(entry) {
+  $("history").close();
+  let events;
+  try {
+    const response = await fetch(`/api/history/${entry.id}`);
+    if (!response.ok) throw new Error();
+    events = await response.json();
+  } catch {
+    showProblem("Could not open this research. It may have been deleted.");
+    return;
+  }
+  reset();
+  $("question").value = entry.question;
+  for (const { event, data } of events) render[event]?.(JSON.parse(data));
+  if (entry.status !== "error") $("status").textContent = `Saved research from ${when(entry.created_at)}.`;
+  $("results").scrollIntoView({ block: "start" });
+}
+
+$("history-open").addEventListener("click", () => $("history").showModal());
+$("history-close").addEventListener("click", () => $("history").close());
+loadHistory();
