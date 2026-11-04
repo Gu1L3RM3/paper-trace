@@ -1,26 +1,62 @@
 name: publish
 
-# Push a tag such as v0.2.0 to publish that version to PyPI, so users can run `uvx papertrace`.
+# Continuous delivery of the PyPI package. Every push to main whose pyproject.toml version has
+# no release yet is tested, published to PyPI, tagged vX.Y.Z and released on GitHub.
+# To ship, bump `version` in a PR; merging it deploys. Other pushes to main publish nothing.
+# The file name and the `pypi` environment are what PyPI's trusted publisher trusts: keep both.
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+  workflow_dispatch:
+
+# One release at a time, never cancelled halfway through an upload.
+concurrency:
+  group: publish
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      new: ${{ steps.check.outputs.new }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - id: check
+        run: |
+          version=$(uv version --short)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" > /dev/null; then
+            echo "v$version is already released; nothing to publish."
+            echo "new=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Releasing v$version."
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          fi
+
   publish:
+    needs: version
+    if: needs.version.outputs.new == 'true'
     runs-on: ubuntu-latest
     # PyPI trusted publishing: no API token is stored in the repository.
     environment: pypi
     permissions:
-      id-token: write
+      id-token: write # PyPI trusted publishing
+      contents: write # create the tag and the GitHub release
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - name: Tag matches the package version
-        run: test "${GITHUB_REF_NAME#v}" = "$(uv version --short)"
       - run: uv sync --locked
       - run: uv run pytest
       - run: uv build
-      - run: uv publish --trusted-publishing always
+      # --check-url skips files PyPI already has, so a rerun after a failed release step is safe.
+      - run: uv publish --trusted-publishing always --check-url https://pypi.org/simple/
+      - name: Tag and release on GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ needs.version.outputs.version }}
+        run: gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "$TAG" --generate-notes

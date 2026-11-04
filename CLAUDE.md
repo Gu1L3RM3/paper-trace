@@ -23,7 +23,8 @@ uv run pre-commit run --all-files
 uv run python tools/prompt_eval/run.py --out report.html   # prompt/tool/schema lint + 12 live cases
 uv run papertrace                  # API + UI on 127.0.0.1:8000 (or next free port), opens browser
 uvx --from . papertrace            # what users run: the installed package, zero config
-# Release: bump version in pyproject.toml, tag vX.Y.Z on main -> .github/workflows/publish.yml
+# Release (CD, .github/workflows/publish.yml): bump version in pyproject.toml in a PR; merging it
+# publishes to PyPI, tags vX.Y.Z and creates the GitHub release. Never tag by hand.
 uv run uvicorn papertrace.api.app:app --reload   # dev server with reload
 ```
 
